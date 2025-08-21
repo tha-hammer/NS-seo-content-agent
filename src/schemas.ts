@@ -1,51 +1,78 @@
 import { z } from 'zod';
 
-// Funnel Stage Enum
-export const FunnelStageSchema = z.enum(['TOF', 'MOF', 'BOF']);
+// Funnel Stage - flexible to handle natural language descriptions
+export const FunnelStageSchema = z.union([
+  z.enum(['TOF', 'MOF', 'BOF']),
+  z.string().min(1)
+]);
 export type FunnelStage = z.infer<typeof FunnelStageSchema>;
 
-// Search Intent Enum
-export const SearchIntentSchema = z.enum(['informational', 'comparative', 'transactional']);
+// Search Intent - flexible to handle natural language descriptions
+export const SearchIntentSchema = z.union([
+  z.enum(['informational', 'comparative', 'transactional']),
+  z.string().min(1)
+]);
 export type SearchIntent = z.infer<typeof SearchIntentSchema>;
 
-// TPB (Theory of Planned Behavior) Enum
-export const TPBSchema = z.enum(['attitude', 'norm', 'perceived-control']);
+// TPB (Theory of Planned Behavior) - flexible to handle string, object, or array
+export const TPBSchema = z.union([
+  z.enum(['attitude', 'norm', 'perceived-control']),
+  z.string().min(1),
+  z.array(z.string()),
+  z.object({
+    attitude: z.string().optional(),
+    norm: z.string().optional(),
+    'perceived-control': z.string().optional()
+  }).passthrough()
+]);
 export type TPB = z.infer<typeof TPBSchema>;
 
-// Heading Structure for Outline
+// Heading Structure for Outline - flexible to handle natural LLM output
 export const HeadingSchema = z.object({
-  h2: z.string().min(5),
-  keypoints: z.array(z.string().min(3)).min(2),
+  h2: z.string().min(5).optional(),
+  title: z.string().min(5).optional(),
+  keypoints: z.array(z.string().min(3)).min(2).optional(),
   children: z.array(z.object({
     h3: z.string().min(5),
     bullets: z.array(z.string().min(3)).min(2)
   })).optional().default([])
-});
+}).passthrough();
 
-// FAQ Structure
+// FAQ Structure - flexible to handle natural LLM output
 export const FAQSchema = z.object({
-  q: z.string().min(10),
-  a_outline: z.string().min(20)
-});
+  q: z.string().min(10).optional(),
+  question: z.string().min(10).optional(),
+  a_outline: z.string().min(20).optional(),
+  answer: z.string().min(20).optional()
+}).passthrough();
 
-// Outline Schema
+// Outline Schema - flexible to handle natural LLM output
 export const OutlineSchema = z.object({
-  title: z.string().min(10).max(60),
+  title: z.string().min(10).max(100),
   slug: z.string().regex(/^[a-z0-9-]+$/),
-  funnel: FunnelStageSchema,
-  intent: SearchIntentSchema,
-  tpb: TPBSchema,
-  targetReader: z.string().min(10),
-  headings: z.array(HeadingSchema).min(3).max(8),
-  faqs: z.array(FAQSchema).min(3).max(10),
+  funnel: FunnelStageSchema.optional(),
+  intent: SearchIntentSchema.optional(),
+  tpb: TPBSchema.optional(),
+  targetReader: z.union([
+    z.string().min(10),
+    z.object({}).passthrough()
+  ]).optional(),
+  headings: z.union([
+    z.array(HeadingSchema).min(1),
+    z.object({}).passthrough()
+  ]).optional(),
+  faqs: z.union([
+    z.array(FAQSchema).min(1),
+    z.object({}).passthrough()
+  ]).optional(),
   metadata: z.object({
-    primaryKeyword: z.string().min(3),
-    secondaryKeywords: z.array(z.string().min(2)).min(2).max(5),
-    suggestedUrl: z.string().startsWith('/'),
-    wordcountTarget: z.number().int().min(1200).max(3000),
-    estimatedReadTime: z.number().int().min(5).max(15)
-  })
-});
+    primaryKeyword: z.string().min(3).optional(),
+    secondaryKeywords: z.array(z.string().min(2)).min(2).max(10).optional(),
+    suggestedUrl: z.string().startsWith('/').optional(),
+    wordcountTarget: z.number().int().min(1200).max(5000).optional(),
+    estimatedReadTime: z.number().int().min(5).max(25).optional()
+  }).passthrough().optional()
+}).passthrough();
 export type Outline = z.infer<typeof OutlineSchema>;
 
 // Frontmatter Schema

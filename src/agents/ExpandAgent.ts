@@ -138,16 +138,17 @@ Return the fully expanded content as JSON matching the ExpandedSchema.`;
 
       const result = await run(this.agent, prompt);
 
-      if (!result.success || !result.output) {
+      const output = result.state._currentStep?.output;
+      if (!output) {
         return {
           success: false,
-          error: 'Failed to expand draft: ' + (result.error || 'Unknown error')
+          error: 'Failed to expand draft: No output received'
         };
       }
 
       // Validate the output against our schema
       try {
-        const validatedExpanded = ExpandedSchema.parse(result.output);
+        const validatedExpanded = ExpandedSchema.parse(JSON.parse(output));
         return {
           success: true,
           data: validatedExpanded
@@ -207,7 +208,7 @@ Return the enhanced expanded content as JSON.`;
       }
 
       try {
-        const validatedExpanded = ExpandedSchema.parse(result.output);
+        const validatedExpanded = ExpandedSchema.parse(JSON.parse(output));
         return {
           success: true,
           data: validatedExpanded

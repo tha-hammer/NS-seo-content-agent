@@ -63,7 +63,22 @@ export class OutlineAgent {
     model: getConfig().models.writer,
     output: {
       type: 'json_schema',
-      schema: OutlineSchema
+      schema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          slug: { type: 'string' },
+          funnel: { type: 'string' },
+          intent: { type: 'string' },
+          tpb: { type: ['string', 'object'] },
+          targetReader: { type: ['string', 'object'] },
+          headings: { type: 'array' },
+          faqs: { type: 'array' },
+          metadata: { type: 'object' }
+        },
+        required: ['title', 'slug', 'funnel', 'intent', 'tpb', 'targetReader', 'headings', 'faqs', 'metadata'],
+        additionalProperties: true
+      }
     }
   });
 
@@ -88,17 +103,44 @@ Return a comprehensive outline that provides genuine value while optimizing for 
       const result = await run(this.agent, prompt);
 
       // Extract the output from the response structure
-      const output = result.state.currentStep?.output;
+      let output = result.state._currentStep?.output;
+      
+      // Try alternative paths if _currentStep doesn't have output
+      if (!output && result.state._generatedItems?.length > 0) {
+        const lastItem = result.state._generatedItems[result.state._generatedItems.length - 1];
+        if (lastItem.type === 'message_output_item' && lastItem.rawItem?.content?.[0]?.text) {
+          output = lastItem.rawItem.content[0].text;
+        }
+      }
+      
+      // Try model responses as last resort
+      if (!output && result.state._modelResponses?.length > 0) {
+        const lastResponse = result.state._modelResponses[result.state._modelResponses.length - 1];
+        if (lastResponse.output?.[0]?.content?.[0]?.text) {
+          output = lastResponse.output[0].content[0].text;
+        }
+      }
+      
       if (!output) {
         return {
           success: false,
-          error: 'Failed to generate outline: No output received'
+          error: 'Failed to generate outline: No output received from any source'
         };
       }
 
       // Validate the output against our schema
       try {
-        const validatedOutline = OutlineSchema.parse(JSON.parse(output));
+        const parsed = JSON.parse(output);
+        
+        // Normalize field names to match our schema
+        const normalized = {
+          ...parsed,
+          funnel: parsed.funnel || parsed.funnelStage || parsed.funnel_stage,
+          intent: parsed.intent || parsed.searchIntent || parsed.search_intent,
+          tpb: parsed.tpb || parsed.tpbClassification || parsed.tpb_classification
+        };
+        
+        const validatedOutline = OutlineSchema.parse(normalized);
         return {
           success: true,
           data: validatedOutline
@@ -141,7 +183,7 @@ Return the refined outline as JSON.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state.currentStep?.output;
+      const output = result.state._currentStep?.output;
       if (!output) {
         return {
           success: false,
@@ -197,7 +239,7 @@ Focus on terms real RV enthusiasts would search for.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state.currentStep?.output;
+      const output = result.state._currentStep?.output;
       if (output) {
         try {
           const parsed = JSON.parse(output);

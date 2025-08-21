@@ -94,16 +94,17 @@ Focus on clear, concise paragraphs that will be expanded later in the pipeline.`
 
       const result = await run(this.agent, prompt);
 
-      if (!result.success || !result.output) {
+      const output = result.state._currentStep?.output;
+      if (!output) {
         return {
           success: false,
-          error: 'Failed to generate draft: ' + (result.error || 'Unknown error')
+          error: 'Failed to generate draft: No output received'
         };
       }
 
       // Validate the output against our schema
       try {
-        const validatedDraft = DraftSchema.parse(result.output);
+        const validatedDraft = DraftSchema.parse(JSON.parse(output));
         return {
           success: true,
           data: validatedDraft
@@ -147,15 +148,16 @@ Return the enhanced draft as JSON matching the schema.`;
 
       const result = await run(this.agent, prompt);
 
-      if (!result.success || !result.output) {
+      const output = result.state._currentStep?.output;
+      if (!output) {
         return {
           success: false,
-          error: 'Failed to enhance draft: ' + (result.error || 'Unknown error')
+          error: 'Failed to enhance draft: No output received'
         };
       }
 
       try {
-        const validatedDraft = DraftSchema.parse(result.output);
+        const validatedDraft = DraftSchema.parse(JSON.parse(output));
         return {
           success: true,
           data: validatedDraft
@@ -207,15 +209,16 @@ Return the updated draft as JSON.`;
 
       const result = await run(this.agent, prompt);
 
-      if (!result.success || !result.output) {
+      const output = result.state._currentStep?.output;
+      if (!output) {
         return {
           success: false,
-          error: 'Failed to add expert quote: ' + (result.error || 'Unknown error')
+          error: 'Failed to add expert quote: No output received'
         };
       }
 
       try {
-        const validatedDraft = DraftSchema.parse(result.output);
+        const validatedDraft = DraftSchema.parse(JSON.parse(output));
         return {
           success: true,
           data: validatedDraft

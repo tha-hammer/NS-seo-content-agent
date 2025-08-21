@@ -81,12 +81,13 @@ Return the complete finalized content with all optimizations applied.`;
 
       const response = await run(this.agent, prompt);
       
-      if (!response.success) {
-        return { success: false, error: response.error || 'Agent failed to finalize content' };
+      const output = response.state._currentStep?.output;
+      if (!output) {
+        return { success: false, error: 'No output received from agent' };
       }
 
-      // Validate the response matches our schema
-      const validation = FinalSchema.safeParse(response.output);
+      // Parse and validate the response matches our schema
+      const validation = FinalSchema.safeParse(JSON.parse(output));
       if (!validation.success) {
         return { 
           success: false, 

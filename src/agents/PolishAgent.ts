@@ -135,16 +135,17 @@ Return the polished content as JSON matching the ExpandedSchema.`;
 
       const result = await run(this.agent, prompt);
 
-      if (!result.success || !result.output) {
+      const output = result.state._currentStep?.output;
+      if (!output) {
         return {
           success: false,
-          error: 'Failed to polish content: ' + (result.error || 'Unknown error')
+          error: 'Failed to polish content: No output received'
         };
       }
 
       // Validate the output against our schema
       try {
-        const validatedPolished = ExpandedSchema.parse(result.output);
+        const validatedPolished = ExpandedSchema.parse(JSON.parse(output));
         return {
           success: true,
           data: validatedPolished
