@@ -1,6 +1,7 @@
 import { Agent, run } from '@openai/agents';
 import { FinalSchema, type Expanded, type Final, type FunnelStage } from '@/schemas';
 import { getConfig } from '@/config';
+import { extractAgentOutput, parseJsonResponse } from '@/utils/agentResponse';
 
 const FINALIZE_INSTRUCTIONS = `You are the Finalize Agent, responsible for the final SEO optimization and preparation of content for publication.
 
@@ -49,8 +50,8 @@ export class FinalizeAgent {
   private static agent = Agent.create({
     name: 'Finalize Agent',
     instructions: FINALIZE_INSTRUCTIONS,
-    model: getConfig().models.editor,
-    output: { type: 'json_schema', schema: FinalSchema }
+    model: getConfig().models.editor
+    // Note: output schema removed due to SDK compatibility
   });
 
   static async finalizeContent(expanded: Expanded): Promise<{ success: boolean; data?: Final; error?: string }> {
@@ -61,13 +62,13 @@ export class FinalizeAgent {
 ${JSON.stringify(expanded.frontmatter, null, 2)}
 
 **Content:**
-${expanded.content}
+${expanded.markdownContent || expanded.content || ''}
 
 **Evidence:**
 ${JSON.stringify(expanded.evidence, null, 2)}
 
-**Current Funnel Stage:** ${expanded.frontmatter.stage}
-**Search Intent:** ${expanded.frontmatter.intent}
+**Current Funnel Stage:** ${expanded.frontmatter.stage || expanded.frontmatter.funnel || 'Unknown'}
+**Search Intent:** ${expanded.frontmatter.intent || expanded.frontmatter.searchIntent || 'informational'}
 
 Please:
 1. Optimize the title to be under 60 characters with year and power words
@@ -81,21 +82,39 @@ Return the complete finalized content with all optimizations applied.`;
 
       const response = await run(this.agent, prompt);
       
-      const output = response.state._currentStep?.output;
+      // Extract the output from the response structure
+      const output = extractAgentOutput(response);
+      
       if (!output) {
-        return { success: false, error: 'No output received from agent' };
+        return { success: false, error: 'No output received from agent from any source' };
       }
 
-      // Parse and validate the response matches our schema
-      const validation = FinalSchema.safeParse(JSON.parse(output));
-      if (!validation.success) {
-        return { 
-          success: false, 
-          error: `Schema validation failed: ${validation.error.message}` 
+      // Parse JSON response
+      const parseResult = parseJsonResponse(output);
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: `Failed to parse JSON from finalize output: ${parseResult.error}. Output: ${output.substring(0, 200)}...`
         };
       }
-
-      return { success: true, data: validation.data };
+      
+      // Parse and validate the response matches our schema
+      try {
+        const validation = FinalSchema.safeParse(parseResult.data);
+        if (!validation.success) {
+          return { 
+            success: false, 
+            error: `Schema validation failed: ${validation.error.message}` 
+          };
+        }
+        
+        return { success: true, data: validation.data };
+      } catch (validationError) {
+        return {
+          success: false,
+          error: `Final content validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
+        };
+      }
     } catch (error) {
       return { 
         success: false, 
@@ -224,18 +243,18 @@ Return the complete finalized content with all optimizations applied.`;
     const issues: string[] = [];
 
     // Title validation
-    if (final.frontmatter.title.length < 30) {
+    if (!final.frontmatter.title || final.frontmatter.title.length < 30) {
       issues.push('Title too short (needs optimization)');
     }
-    if (final.frontmatter.title.length > 60) {
+    if (final.frontmatter.title && final.frontmatter.title.length > 60) {
       issues.push('Title too long (exceeds 60 characters)');
     }
 
     // Meta description validation
-    if (final.frontmatter.description.length < 120) {
+    if (!final.frontmatter.description || final.frontmatter.description.length < 120) {
       issues.push('Meta description too short');
     }
-    if (final.frontmatter.description.length > 155) {
+    if (final.frontmatter.description && final.frontmatter.description.length > 155) {
       issues.push('Meta description too long');
     }
 
@@ -245,23 +264,24 @@ Return the complete finalized content with all optimizations applied.`;
     }
 
     // Content validation
-    if (final.content.length < 1200) {
+    const content = final.markdownContent || final.content;
+    if (!content || content.length < 1200) {
       issues.push('Content too short for SEO effectiveness');
     }
 
     // CTA validation
-    if (!final.seoOptimizations.ctaIncluded) {
+    if (!final.seoOptimizations?.ctaIncluded) {
       issues.push('No conversion CTA included');
     }
 
     // Quality metrics validation
-    if (final.qualityMetrics.readabilityGrade < 8) {
+    if (!final.qualityMetrics?.readabilityGrade || final.qualityMetrics.readabilityGrade < 8) {
       issues.push('Readability grade below target (8+)');
     }
-    if (final.qualityMetrics.fleschKincaidScore < 60) {
+    if (final.qualityMetrics?.fleschKincaidScore && final.qualityMetrics.fleschKincaidScore < 60) {
       issues.push('Flesch-Kincaid score too low (should be 60+)');
     }
-    if (final.qualityMetrics.passiveVoicePercent > 20) {
+    if (final.qualityMetrics?.passiveVoicePercent && final.qualityMetrics.passiveVoicePercent > 20) {
       issues.push('Too much passive voice (should be under 20%)');
     }
 

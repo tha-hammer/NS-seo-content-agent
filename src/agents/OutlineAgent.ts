@@ -1,6 +1,7 @@
 import { Agent, run } from '@openai/agents';
 import { getConfig } from '../config.js';
 import { OutlineSchema, type Outline } from '../schemas.js';
+import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
 
 const OUTLINE_INSTRUCTIONS = `You are the Outline Agent, specialized in creating comprehensive, SEO-optimized outlines for RV and recreational vehicle content.
 
@@ -61,25 +62,7 @@ export class OutlineAgent {
     name: 'Outline Agent',
     instructions: OUTLINE_INSTRUCTIONS,
     model: getConfig().models.writer,
-    output: {
-      type: 'json_schema',
-      schema: {
-        type: 'object',
-        properties: {
-          title: { type: 'string' },
-          slug: { type: 'string' },
-          funnel: { type: 'string' },
-          intent: { type: 'string' },
-          tpb: { type: ['string', 'object'] },
-          targetReader: { type: ['string', 'object'] },
-          headings: { type: 'array' },
-          faqs: { type: 'array' },
-          metadata: { type: 'object' }
-        },
-        required: ['title', 'slug', 'funnel', 'intent', 'tpb', 'targetReader', 'headings', 'faqs', 'metadata'],
-        additionalProperties: true
-      }
-    }
+    // Note: output schema temporarily removed due to SDK compatibility
   });
 
   /**
@@ -100,26 +83,12 @@ Consider:
 
 Return a comprehensive outline that provides genuine value while optimizing for search discoverability.`;
 
+      console.log('DEBUG: About to call LLM for outline generation...');
       const result = await run(this.agent, prompt);
+      console.log('DEBUG: LLM call completed, processing response...');
 
       // Extract the output from the response structure
-      let output = result.state._currentStep?.output;
-      
-      // Try alternative paths if _currentStep doesn't have output
-      if (!output && result.state._generatedItems?.length > 0) {
-        const lastItem = result.state._generatedItems[result.state._generatedItems.length - 1];
-        if (lastItem.type === 'message_output_item' && lastItem.rawItem?.content?.[0]?.text) {
-          output = lastItem.rawItem.content[0].text;
-        }
-      }
-      
-      // Try model responses as last resort
-      if (!output && result.state._modelResponses?.length > 0) {
-        const lastResponse = result.state._modelResponses[result.state._modelResponses.length - 1];
-        if (lastResponse.output?.[0]?.content?.[0]?.text) {
-          output = lastResponse.output[0].content[0].text;
-        }
-      }
+      const output = extractAgentOutput(result);
       
       if (!output) {
         return {
@@ -128,33 +97,32 @@ Return a comprehensive outline that provides genuine value while optimizing for 
         };
       }
 
+      // Parse JSON response
+      const parseResult = parseJsonResponse(output);
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: `Failed to parse JSON from outline output: ${parseResult.error}. Output: ${output.substring(0, 200)}...`
+        };
+      }
+      
+      // Normalize field names to match our schema
+      const parsed = parseResult.data;
+      let intentValue = parsed.intent || parsed.searchIntent || parsed.search_intent;
+      // Convert array intent to first value if it's an array
+      if (Array.isArray(intentValue)) {
+        intentValue = intentValue.length > 0 ? intentValue[0] : 'informational';
+      }
+      
+      const normalized = {
+        ...parsed,
+        funnel: parsed.funnel || parsed.funnelStage || parsed.funnel_stage,
+        intent: intentValue,
+        tpb: parsed.tpb || parsed.tpbClassification || parsed.tpb_classification
+      };
+      
       // Validate the output against our schema
       try {
-        // Try to parse JSON, handle cases where LLM returns non-JSON
-        let parsed;
-        try {
-          parsed = JSON.parse(output);
-        } catch (jsonError) {
-          // If JSON parsing fails, try to extract JSON from the text
-          const jsonMatch = output.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            parsed = JSON.parse(jsonMatch[0]);
-          } else {
-            return {
-              success: false,
-              error: `Failed to parse JSON from outline output: ${jsonError.message}. Output: ${output.substring(0, 200)}...`
-            };
-          }
-        }
-        
-        // Normalize field names to match our schema
-        const normalized = {
-          ...parsed,
-          funnel: parsed.funnel || parsed.funnelStage || parsed.funnel_stage,
-          intent: parsed.intent || parsed.searchIntent || parsed.search_intent,
-          tpb: parsed.tpb || parsed.tpbClassification || parsed.tpb_classification
-        };
-        
         const validatedOutline = OutlineSchema.parse(normalized);
         return {
           success: true,
@@ -163,13 +131,13 @@ Return a comprehensive outline that provides genuine value while optimizing for 
       } catch (validationError) {
         return {
           success: false,
-          error: `Outline validation failed: ${validationError.message}`
+          error: `Outline validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Agent execution failed: ${error.message}`
+        error: `Agent execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -198,7 +166,7 @@ Return the refined outline as JSON.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state._currentStep?.output;
+      const output = extractAgentOutput(result);
       if (!output) {
         return {
           success: false,
@@ -206,8 +174,16 @@ Return the refined outline as JSON.`;
         };
       }
 
+      const parseResult = parseJsonResponse(output);
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: `Failed to parse refined outline JSON: ${parseResult.error}`
+        };
+      }
+
       try {
-        const validatedOutline = OutlineSchema.parse(JSON.parse(output));
+        const validatedOutline = OutlineSchema.parse(parseResult.data);
         return {
           success: true,
           data: validatedOutline
@@ -215,13 +191,13 @@ Return the refined outline as JSON.`;
       } catch (validationError) {
         return {
           success: false,
-          error: `Refined outline validation failed: ${validationError.message}`
+          error: `Refined outline validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Outline refinement failed: ${error.message}`
+        error: `Outline refinement failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -243,7 +219,7 @@ Funnel Stage: ${outline.funnel}
 Intent: ${outline.intent}
 
 Headings:
-${outline.headings.map(h => `- ${h.h2}`).join('\n')}
+${outline.headings && Array.isArray(outline.headings) ? outline.headings.map(h => `- ${h.h2 || h.title || 'Unnamed section'}`).join('\n') : 'No headings available'}
 
 Generate:
 1. 8-12 relevant keywords (mix of head terms and long-tail)
@@ -254,32 +230,31 @@ Focus on terms real RV enthusiasts would search for.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state._currentStep?.output;
+      const output = extractAgentOutput(result);
       if (output) {
-        try {
-          const parsed = JSON.parse(output);
+        const parseResult = parseJsonResponse(output);
+        if (parseResult.success) {
+          const parsed = parseResult.data;
           return {
             keywords: parsed.keywords || [],
             metaDescription: parsed.metaDescription || '',
             suggestedTags: parsed.suggestedTags || []
           };
-        } catch (e) {
-          // Continue to fallback
         }
       }
 
       // Fallback if agent fails
       return {
-        keywords: [outline.metadata.primaryKeyword, ...outline.metadata.secondaryKeywords],
+        keywords: [outline.metadata?.primaryKeyword || 'rv guide', ...(outline.metadata?.secondaryKeywords || [])],
         metaDescription: outline.title + ' - Comprehensive guide for RV enthusiasts',
-        suggestedTags: [outline.cluster, outline.funnel.toLowerCase(), outline.intent]
+        suggestedTags: [String(outline.cluster || 'rv'), String(outline.funnel || '').toLowerCase(), String(outline.intent || 'informational')]
       };
     } catch (error) {
       // Return basic metadata as fallback
       return {
-        keywords: [outline.metadata.primaryKeyword, ...outline.metadata.secondaryKeywords],
+        keywords: [outline.metadata?.primaryKeyword || 'rv guide', ...(outline.metadata?.secondaryKeywords || [])],
         metaDescription: outline.title + ' - Comprehensive guide for RV enthusiasts',
-        suggestedTags: [outline.cluster || 'rv', outline.funnel.toLowerCase(), outline.intent]
+        suggestedTags: [String(outline.cluster || 'rv'), String(outline.funnel || '').toLowerCase(), String(outline.intent || 'informational')]
       };
     }
   }
@@ -296,28 +271,30 @@ Focus on terms real RV enthusiasts would search for.`;
     const suggestions: string[] = [];
 
     // Check heading structure
-    if (outline.headings.length < 3) {
+    if (!outline.headings || !Array.isArray(outline.headings) || outline.headings.length < 3) {
       issues.push('Outline needs at least 3 main sections');
     }
 
     // Check for balanced content distribution
-    const totalKeypoints = outline.headings.reduce((sum, h) => sum + h.keypoints.length, 0);
+    const totalKeypoints = outline.headings && Array.isArray(outline.headings) 
+      ? outline.headings.reduce((sum, h) => sum + ((h.keypoints && Array.isArray(h.keypoints)) ? h.keypoints.length : 0), 0)
+      : 0;
     if (totalKeypoints < 6) {
       issues.push('Outline needs more detailed key points');
     }
 
     // Check FAQ quality
-    if (outline.faqs.length < 3) {
+    if (!outline.faqs || !Array.isArray(outline.faqs) || outline.faqs.length < 3) {
       issues.push('Need at least 3 FAQ entries');
     }
 
     // Check keyword strategy
-    if (outline.metadata.secondaryKeywords.length < 2) {
+    if (!outline.metadata?.secondaryKeywords || outline.metadata.secondaryKeywords.length < 2) {
       suggestions.push('Consider adding more secondary keywords');
     }
 
     // Check word count target
-    if (outline.metadata.wordcountTarget < 1200) {
+    if (!outline.metadata?.wordcountTarget || outline.metadata.wordcountTarget < 1200) {
       suggestions.push('Consider higher word count target for better SEO performance');
     }
 

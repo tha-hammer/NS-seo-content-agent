@@ -1,6 +1,7 @@
 import { Agent, run } from '@openai/agents';
 import { getConfig } from '../config.js';
 import { ExpandedSchema, type Expanded, type Draft } from '../schemas.js';
+import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
 
 const EXPAND_INSTRUCTIONS = `You are the Expand Agent, specialized in taking concise initial drafts and expanding them with comprehensive content, tables, examples, checklists, image placeholders, and E-E-A-T elements for RV and recreational vehicle topics.
 
@@ -95,11 +96,8 @@ export class ExpandAgent {
   private static agent = Agent.create({
     name: 'Expand Agent',
     instructions: EXPAND_INSTRUCTIONS,
-    model: getConfig().models.writer,
-    output: {
-      type: 'json_schema',
-      schema: ExpandedSchema
-    }
+    model: getConfig().models.writer
+    // Note: output schema removed due to SDK compatibility
   });
 
   /**
@@ -113,7 +111,7 @@ CURRENT DRAFT:
 ${JSON.stringify(draft, null, 2)}
 
 Expansion Requirements:
-1. **Triple the content length** - Expand from ${draft.content.length} characters to ~${draft.content.length * 3}
+1. **Triple the content length** - Expand from ${(draft.markdownContent || draft.content || '').length} characters to ~${(draft.markdownContent || draft.content || '').length * 3}
 2. **Add 3-4 comparison/data tables** using proper markdown table format
 3. **Include 2-3 real-world examples** with specific family scenarios or case studies
 4. **Insert 3-4 actionable checklists** using markdown checkbox format
@@ -138,17 +136,39 @@ Return the fully expanded content as JSON matching the ExpandedSchema.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state._currentStep?.output;
+      // Extract the output from the response structure
+      const output = extractAgentOutput(result);
+      
       if (!output) {
         return {
           success: false,
-          error: 'Failed to expand draft: No output received'
+          error: 'Failed to expand draft: No output received from any source'
         };
       }
 
+      // Parse JSON response
+      const parseResult = parseJsonResponse(output);
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: `Failed to parse JSON from expanded output: ${parseResult.error}. Output: ${output.substring(0, 200)}...`
+        };
+      }
+      
+      // Normalize evidence field if it's an array
+      const parsed = parseResult.data;
+      if (parsed.evidence && Array.isArray(parsed.evidence)) {
+        // Convert array to object format
+        parsed.evidence = {
+          claims: parsed.evidence.filter(item => item && typeof item === 'object' && item.statement),
+          citations: parsed.evidence.filter(item => item && typeof item === 'object' && item.url),
+          expertQuotes: parsed.evidence.filter(item => item && typeof item === 'object' && item.quote)
+        };
+      }
+      
       // Validate the output against our schema
       try {
-        const validatedExpanded = ExpandedSchema.parse(JSON.parse(output));
+        const validatedExpanded = ExpandedSchema.parse(parsed);
         return {
           success: true,
           data: validatedExpanded
@@ -156,13 +176,13 @@ Return the fully expanded content as JSON matching the ExpandedSchema.`;
       } catch (validationError) {
         return {
           success: false,
-          error: `Expanded content validation failed: ${validationError.message}`
+          error: `Expanded content validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Agent execution failed: ${error.message}`
+        error: `Agent execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -200,10 +220,13 @@ Return the enhanced expanded content as JSON.`;
 
       const result = await run(this.agent, prompt);
 
-      if (!result.success || !result.output) {
+      // Extract the output from the response structure
+      const output = extractAgentOutput(result);
+      
+      if (!output) {
         return {
           success: false,
-          error: 'Failed to add tables and examples: ' + (result.error || 'Unknown error')
+          error: 'Failed to add tables and examples: No output received'
         };
       }
 
@@ -216,13 +239,13 @@ Return the enhanced expanded content as JSON.`;
       } catch (validationError) {
         return {
           success: false,
-          error: `Enhanced expanded content validation failed: ${validationError.message}`
+          error: `Enhanced expanded content validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Adding tables and examples failed: ${error.message}`
+        error: `Adding tables and examples failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -238,55 +261,58 @@ Return the enhanced expanded content as JSON.`;
     const issues: string[] = [];
     const suggestions: string[] = [];
 
-    // Check content length (should be substantially longer than draft)
-    if (expanded.content.length < 1200) {
+    // Check content length (should be substantially longer than draft) - use markdownContent or content
+    const content = expanded.markdownContent || expanded.content;
+    if (!content || content.length < 1200) {
       issues.push('Content too short for expanded draft');
     }
 
     // Check for tables
-    const tableCount = (expanded.content.match(/\|.*\|/g) || []).length;
+    const tableCount = (content?.match(/\|.*\|/g) || []).length;
     if (tableCount < 6) { // At least 2 tables with 3+ rows each
       issues.push('No tables or structured data found');
     }
 
     // Check for checklists
-    const checklistItems = (expanded.content.match(/- \[ \]/g) || []).length;
+    const checklistItems = (content?.match(/- \[ \]/g) || []).length;
     if (checklistItems < 3) {
       suggestions.push('Consider adding more actionable checklists');
     }
 
     // Check for image placeholders
-    if (expanded.imagePlaceholders.length === 0) {
+    if (!expanded.imagePlaceholders || expanded.imagePlaceholders.length === 0) {
       issues.push('No image placeholders provided');
     } else if (expanded.imagePlaceholders.length < 2) {
       suggestions.push('Consider adding more strategic image placements');
     }
 
     // Validate image placeholders
-    expanded.imagePlaceholders.forEach((img, index) => {
-      if (img.altText.length < 10) {
-        issues.push(`Image ${index + 1} alt text too short`);
-      }
-      if (!img.position || img.position.length < 5) {
-        issues.push(`Image ${index + 1} missing proper position indicator`);
-      }
-    });
+    if (expanded.imagePlaceholders) {
+      expanded.imagePlaceholders.forEach((img, index) => {
+        if (!img.altText || img.altText.length < 10) {
+          issues.push(`Image ${index + 1} alt text too short`);
+        }
+        if (!img.position || img.position.length < 5) {
+          issues.push(`Image ${index + 1} missing proper position indicator`);
+        }
+      });
+    }
 
     // Check E-E-A-T signals
-    if (!expanded.eatSignals.authorBio) {
+    if (!expanded.eatSignals?.authorBio) {
       issues.push('Missing author bio for E-E-A-T');
     }
 
-    if (!expanded.eatSignals.factChecked) {
+    if (!expanded.eatSignals?.factChecked) {
       suggestions.push('Consider adding fact-checking verification');
     }
 
     // Check evidence quality
-    if (expanded.evidence.claims.length === 0) {
+    if (!expanded.evidence?.claims || expanded.evidence.claims.length === 0) {
       issues.push('No factual claims mapped to sources');
     }
 
-    if (expanded.evidence.expertQuotes.length === 0) {
+    if (!expanded.evidence?.expertQuotes || expanded.evidence.expertQuotes.length === 0) {
       suggestions.push('Consider adding expert quotes for authority');
     }
 
@@ -296,7 +322,7 @@ Return the enhanced expanded content as JSON.`;
       'for instance', 'let\'s say', 'imagine'
     ];
     const hasExamples = exampleIndicators.some(indicator => 
-      expanded.content.toLowerCase().includes(indicator)
+      content?.toLowerCase().includes(indicator)
     );
     
     if (!hasExamples) {
@@ -304,8 +330,8 @@ Return the enhanced expanded content as JSON.`;
     }
 
     // Check content depth (should have substantial sections)
-    const h2Count = (expanded.content.match(/## /g) || []).length;
-    const h3Count = (expanded.content.match(/### /g) || []).length;
+    const h2Count = (content?.match(/## /g) || []).length;
+    const h3Count = (content?.match(/### /g) || []).length;
     
     if (h2Count < 3) {
       issues.push('Insufficient main sections for comprehensive coverage');

@@ -1,6 +1,7 @@
 import { Agent, run } from '@openai/agents';
 import { getConfig } from '../config.js';
 import { DraftSchema, type Draft, type Outline } from '../schemas.js';
+import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
 
 const DRAFT_INSTRUCTIONS = `You are the Draft Agent, specialized in creating concise, well-cited initial draft content from structured outlines for RV and recreational vehicle topics.
 
@@ -56,11 +57,8 @@ export class DraftAgent {
   private static agent = Agent.create({
     name: 'Draft Agent',
     instructions: DRAFT_INSTRUCTIONS,
-    model: getConfig().models.writer,
-    output: {
-      type: 'json_schema',
-      schema: DraftSchema
-    }
+    model: getConfig().models.writer
+    // Note: output schema removed due to SDK compatibility
   });
 
   /**
@@ -74,10 +72,10 @@ OUTLINE:
 ${JSON.stringify(outline, null, 2)}
 
 Requirements:
-- Target word count: ${Math.floor(outline.metadata.wordcountTarget * 0.6)} words (60% of final target)
-- Funnel stage: ${outline.funnel} (${getFunnelDescription(outline.funnel)})
-- Search intent: ${outline.intent}
-- Target reader: ${outline.targetReader}
+- Target word count: ${outline.metadata?.wordcountTarget ? Math.floor(outline.metadata.wordcountTarget * 0.6) : 1200} words (60% of final target)
+- Funnel stage: ${outline.funnel || 'Unknown'} (${getFunnelDescription(outline.funnel || 'Unknown')})
+- Search intent: ${outline.intent || 'informational'}
+- Target reader: ${outline.targetReader || 'General audience'}
 - Reading level: 8th-10th grade
 
 Structure:
@@ -94,17 +92,49 @@ Focus on clear, concise paragraphs that will be expanded later in the pipeline.`
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state._currentStep?.output;
+      // Extract the output from the response structure
+      const output = extractAgentOutput(result);
+      
       if (!output) {
         return {
           success: false,
-          error: 'Failed to generate draft: No output received'
+          error: 'Failed to generate draft: No output received from any source'
         };
       }
 
+      // Parse JSON response
+      const parseResult = parseJsonResponse(output);
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: `Failed to parse JSON from draft output: ${parseResult.error}. Output: ${output.substring(0, 200)}...`
+        };
+      }
+      
+      // Normalize howtoBlocks steps if they are strings
+      const parsed = parseResult.data;
+      if (parsed.howtoBlocks && Array.isArray(parsed.howtoBlocks)) {
+        parsed.howtoBlocks = parsed.howtoBlocks.map(block => {
+          if (block.steps && Array.isArray(block.steps)) {
+            block.steps = block.steps.map((step, index) => {
+              // Convert string steps to object format
+              if (typeof step === 'string') {
+                return {
+                  step: index + 1,
+                  description: step,
+                  text: step
+                };
+              }
+              return step;
+            });
+          }
+          return block;
+        });
+      }
+      
       // Validate the output against our schema
       try {
-        const validatedDraft = DraftSchema.parse(JSON.parse(output));
+        const validatedDraft = DraftSchema.parse(parsed);
         return {
           success: true,
           data: validatedDraft
@@ -112,13 +142,13 @@ Focus on clear, concise paragraphs that will be expanded later in the pipeline.`
       } catch (validationError) {
         return {
           success: false,
-          error: `Draft validation failed: ${validationError.message}`
+          error: `Draft validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Agent execution failed: ${error.message}`
+        error: `Agent execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -148,7 +178,9 @@ Return the enhanced draft as JSON matching the schema.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state._currentStep?.output;
+      // Extract the output from the response structure
+      const output = extractAgentOutput(result);
+      
       if (!output) {
         return {
           success: false,
@@ -165,13 +197,13 @@ Return the enhanced draft as JSON matching the schema.`;
       } catch (validationError) {
         return {
           success: false,
-          error: `Enhanced draft validation failed: ${validationError.message}`
+          error: `Enhanced draft validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Draft enhancement failed: ${error.message}`
+        error: `Draft enhancement failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -209,7 +241,9 @@ Return the updated draft as JSON.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state._currentStep?.output;
+      // Extract the output from the response structure
+      const output = extractAgentOutput(result);
+      
       if (!output) {
         return {
           success: false,
@@ -226,13 +260,13 @@ Return the updated draft as JSON.`;
       } catch (validationError) {
         return {
           success: false,
-          error: `Draft with expert quote validation failed: ${validationError.message}`
+          error: `Draft with expert quote validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Adding expert quote failed: ${error.message}`
+        error: `Adding expert quote failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -257,24 +291,25 @@ Return the updated draft as JSON.`;
       issues.push('Description too short');
     }
 
-    // Check content length
-    if (!draft.content || draft.content.length < 800) {
+    // Check content length - use markdownContent or content
+    const content = draft.markdownContent || draft.content;
+    if (!content || content.length < 800) {
       issues.push('Content too short for initial draft');
     }
 
     // Check for H1
-    if (!draft.content.includes('# ')) {
+    if (!content?.includes('# ')) {
       issues.push('Content missing H1 heading');
     }
 
     // Check for H2 sections
-    const h2Count = (draft.content.match(/## /g) || []).length;
+    const h2Count = (content?.match(/## /g) || []).length;
     if (h2Count < 3) {
       issues.push('Draft needs at least 3 main sections');
     }
 
     // Check for citation markers
-    const citationMarkers = (draft.content.match(/\[\d+\]/g) || []).length;
+    const citationMarkers = (content?.match(/\[\d+\]/g) || []).length;
     if (citationMarkers === 0) {
       suggestions.push('Consider adding citation markers for key claims');
     }
@@ -282,14 +317,15 @@ Return the updated draft as JSON.`;
     // Check FAQ blocks
     if (draft.faqBlocks && draft.faqBlocks.length > 0) {
       draft.faqBlocks.forEach((faq, index) => {
-        if (faq.answer.length < 40 || faq.answer.length > 60) {
+        const answer = faq.answer || faq.a || faq.a_outline;
+        if (answer && (answer.length < 40 || answer.length > 60)) {
           issues.push(`FAQ ${index + 1} answer should be 40-60 words for featured snippets`);
         }
       });
     }
 
     // Check for direct answers (should start sections)
-    const sections = draft.content.split('## ').slice(1); // Skip before first H2
+    const sections = content?.split('## ').slice(1) || []; // Skip before first H2
     sections.forEach((section, index) => {
       const firstParagraph = section.split('\n\n')[1] || '';
       if (firstParagraph.split(' ').length < 40) {

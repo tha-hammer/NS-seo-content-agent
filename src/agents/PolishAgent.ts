@@ -1,6 +1,7 @@
 import { Agent, run } from '@openai/agents';
 import { getConfig } from '../config.js';
 import { ExpandedSchema, type Expanded } from '../schemas.js';
+import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
 
 const POLISH_INSTRUCTIONS = `You are the Polish Agent, specialized in refining expanded RV content for maximum clarity, scannability, and user engagement while ensuring comprehensive coverage of user questions and inclusive language.
 
@@ -98,11 +99,8 @@ export class PolishAgent {
   private static agent = Agent.create({
     name: 'Polish Agent',
     instructions: POLISH_INSTRUCTIONS,
-    model: getConfig().models.editor,
-    output: {
-      type: 'json_schema',
-      schema: ExpandedSchema
-    }
+    model: getConfig().models.editor
+    // Note: output schema removed due to SDK compatibility
   });
 
   /**
@@ -135,7 +133,7 @@ Return the polished content as JSON matching the ExpandedSchema.`;
 
       const result = await run(this.agent, prompt);
 
-      const output = result.state._currentStep?.output;
+      const output = extractAgentOutput(result);
       if (!output) {
         return {
           success: false,
@@ -143,9 +141,18 @@ Return the polished content as JSON matching the ExpandedSchema.`;
         };
       }
 
+      // Parse JSON response
+      const parseResult = parseJsonResponse(output);
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: `Failed to parse polished content JSON: ${parseResult.error}`
+        };
+      }
+
       // Validate the output against our schema
       try {
-        const validatedPolished = ExpandedSchema.parse(JSON.parse(output));
+        const validatedPolished = ExpandedSchema.parse(parseResult.data);
         return {
           success: true,
           data: validatedPolished
@@ -153,13 +160,13 @@ Return the polished content as JSON matching the ExpandedSchema.`;
       } catch (validationError) {
         return {
           success: false,
-          error: `Polished content validation failed: ${validationError.message}`
+          error: `Polished content validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `Agent execution failed: ${error.message}`
+        error: `Agent execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -198,15 +205,24 @@ Return the updated content with all PAA questions addressed.`;
 
       const result = await run(this.agent, prompt);
 
-      if (!result.success || !result.output) {
+      const output = extractAgentOutput(result);
+      if (!output) {
         return {
           success: false,
-          error: 'Failed to ensure PAA coverage: ' + (result.error || 'Unknown error')
+          error: 'Failed to ensure PAA coverage: No output received'
+        };
+      }
+
+      const parseResult = parseJsonResponse(output);
+      if (!parseResult.success) {
+        return {
+          success: false,
+          error: `Failed to parse PAA content JSON: ${parseResult.error}`
         };
       }
 
       try {
-        const validatedExpanded = ExpandedSchema.parse(result.output);
+        const validatedExpanded = ExpandedSchema.parse(parseResult.data);
         return {
           success: true,
           data: validatedExpanded
@@ -214,13 +230,13 @@ Return the updated content with all PAA questions addressed.`;
       } catch (validationError) {
         return {
           success: false,
-          error: `PAA-enhanced content validation failed: ${validationError.message}`
+          error: `PAA-enhanced content validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`
         };
       }
     } catch (error) {
       return {
         success: false,
-        error: `PAA enhancement failed: ${error.message}`
+        error: `PAA enhancement failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -237,20 +253,21 @@ Return the updated content with all PAA questions addressed.`;
     const suggestions: string[] = [];
 
     // Check for repetitive language
-    const sentences = polished.content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const content = polished.markdownContent || polished.content || '';
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const repetitivePatterns = this.detectRepetition(sentences);
     if (repetitivePatterns.length > 0) {
       issues.push('Content has repetitive language');
     }
 
     // Check for PAA questions
-    const paaQuestionCount = (polished.content.match(/\*\*[^*]+\?\*\*/g) || []).length;
+    const paaQuestionCount = (content.match(/\*\*[^*]+\?\*\*/g) || []).length;
     if (paaQuestionCount < 3) {
       issues.push('No PAA questions answered');
     }
 
     // Check heading quality
-    const headings = polished.content.match(/^#{1,3}\s+.+$/gm) || [];
+    const headings = content.match(/^#{1,3}\s+.+$/gm) || [];
     const poorHeadings = headings.filter(h => {
       const text = h.replace(/^#{1,3}\s+/, '');
       return text.length < 5 || text.toLowerCase().includes('stuff') || text.toLowerCase().includes('things');
@@ -261,14 +278,14 @@ Return the updated content with all PAA questions addressed.`;
     }
 
     // Check for inclusive language issues
-    const inclusiveCheck = this.checkInclusiveLanguage(polished.content);
+    const inclusiveCheck = this.checkInclusiveLanguage(content);
     if (inclusiveCheck.hasIssues) {
       issues.push('Content contains non-inclusive language');
     }
 
     // Check scannability
-    const bulletPoints = (polished.content.match(/^[\s]*[-*+]/gm) || []).length;
-    const boldText = (polished.content.match(/\*\*[^*]+\*\*/g) || []).length;
+    const bulletPoints = (content.match(/^[\s]*[-*+]/gm) || []).length;
+    const boldText = (content.match(/\*\*[^*]+\*\*/g) || []).length;
     
     if (bulletPoints < 3) {
       suggestions.push('Add more bullet points for better scannability');

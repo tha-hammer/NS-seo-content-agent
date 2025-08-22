@@ -63,7 +63,7 @@ export class Pipeline {
       await this.saveRunState(runState);
 
       // Stage 1: Outline Generation
-      const outlineResult = await OutlineAgent.generateOutline(topic);
+      const outlineResult = await OutlineAgent.generateOutline(topic, bucket);
       if (!outlineResult.success) {
         return await this.handleStageError(runState, 'outline', outlineResult.error || 'Outline generation failed');
       }
@@ -225,7 +225,7 @@ export class Pipeline {
       runState.updatedAt = new Date().toISOString();
 
       if (stage === 'outline' || (stage !== 'outline' && !runState.outline)) {
-        const outlineResult = await OutlineAgent.generateOutline(runState.topic);
+        const outlineResult = await OutlineAgent.generateOutline(runState.topic, runState.bucket);
         if (!outlineResult.success) {
           return await this.handleStageError(runState, 'outline', outlineResult.error || 'Outline generation failed');
         }

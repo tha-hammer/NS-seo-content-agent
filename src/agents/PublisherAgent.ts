@@ -45,8 +45,8 @@ export class PublisherAgent {
   private static agent = Agent.create({
     name: 'Publisher Agent',
     instructions: PUBLISHER_INSTRUCTIONS,
-    model: getConfig().models.editor,
-    output: { type: 'json_schema', schema: PublishedSchema }
+    model: getConfig().models.editor
+    // Note: output schema removed due to SDK compatibility
   });
 
   static async publishContent(final: Final): Promise<{ success: boolean; data?: Published; error?: string }> {

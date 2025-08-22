@@ -10,7 +10,8 @@ export type FunnelStage = z.infer<typeof FunnelStageSchema>;
 // Search Intent - flexible to handle natural language descriptions
 export const SearchIntentSchema = z.union([
   z.enum(['informational', 'comparative', 'transactional']),
-  z.string().min(1)
+  z.string().min(1),
+  z.array(z.string()).min(1) // Handle arrays of intents
 ]);
 export type SearchIntent = z.infer<typeof SearchIntentSchema>;
 
@@ -133,35 +134,57 @@ export const DraftSchema = z.object({
   howtoBlocks: z.array(z.object({
     name: z.string().optional(),
     title: z.string().optional(),
-    steps: z.array(z.object({
-      step: z.union([z.string(), z.number()]).optional(),
-      description: z.string().optional(),
-      text: z.string().optional()
-    }).passthrough()).optional()
+    steps: z.array(z.union([
+      // Object format
+      z.object({
+        step: z.union([z.string(), z.number()]).optional(),
+        description: z.string().optional(),
+        text: z.string().optional()
+      }).passthrough(),
+      // String format (LLM often returns strings)
+      z.string()
+    ])).optional()
   }).passthrough()).optional()
 }).passthrough();
 export type Draft = z.infer<typeof DraftSchema>;
 
-// Evidence/Citation Schema - flexible to handle natural LLM output
-export const EvidenceSchema = z.object({
-  claims: z.array(z.object({
-    statement: z.string().optional(),
-    sources: z.array(z.string()).optional(),
-    confidence: z.enum(['high', 'medium', 'low']).optional(),
-    ymyl: z.boolean().optional()
-  }).passthrough()).optional(),
-  citations: z.array(z.object({
-    url: z.string().optional(),
-    title: z.string().optional(),
-    authority: z.enum(['high', 'medium', 'low']).optional(),
-    lastAccessed: z.string().optional()
-  }).passthrough()).optional(),
-  expertQuotes: z.array(z.object({
-    quote: z.string().optional(),
-    attribution: z.string().optional(),
-    credentials: z.string().optional()
-  }).passthrough()).optional()
-}).passthrough();
+// Evidence/Citation Schema - flexible to handle natural LLM output (object or array)
+export const EvidenceSchema = z.union([
+  // Object format
+  z.object({
+    claims: z.array(z.object({
+      statement: z.string().optional(),
+      sources: z.array(z.union([
+        z.string(), // Simple URL string
+        z.object({  // Object with URL and metadata (real LLM format)
+          url: z.string().optional(),
+          title: z.string().optional(),
+          author: z.string().optional(),
+          publishDate: z.string().optional(),
+          authority: z.enum(['high', 'medium', 'low']).optional(),
+          lastAccessed: z.string().optional()
+        }).passthrough()
+      ])).optional(),
+      confidence: z.enum(['high', 'medium', 'low']).optional(),
+      ymyl: z.boolean().optional()
+    }).passthrough()).optional(),
+    citations: z.array(z.object({
+      url: z.string().optional(),
+      title: z.string().optional(),
+      authority: z.enum(['high', 'medium', 'low']).optional(),
+      lastAccessed: z.string().optional()
+    }).passthrough()).optional(),
+    expertQuotes: z.array(z.object({
+      quote: z.string().optional(),
+      attribution: z.string().optional(),
+      credentials: z.string().optional()
+    }).passthrough()).optional()
+  }).passthrough(),
+  // Array format (convert to object)
+  z.array(z.any()),
+  // String format
+  z.string()
+]);
 export type Evidence = z.infer<typeof EvidenceSchema>;
 
 // Expanded Draft Schema - flexible to handle natural LLM output
