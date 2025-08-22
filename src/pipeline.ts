@@ -74,7 +74,7 @@ export class Pipeline {
       await this.saveRunState(runState);
 
       // Stage 2: Draft Creation
-      const draftResult = await DraftAgent.createDraft(runState.outline!);
+      const draftResult = await DraftAgent.generateDraft(runState.outline!);
       if (!draftResult.success) {
         return await this.handleStageError(runState, 'draft', draftResult.error || 'Draft creation failed');
       }
@@ -85,7 +85,7 @@ export class Pipeline {
       await this.saveRunState(runState);
 
       // Stage 3: Content Expansion
-      const expandResult = await ExpandAgent.expandContent(runState.draft!);
+      const expandResult = await ExpandAgent.expandDraft(runState.draft!);
       if (!expandResult.success) {
         return await this.handleStageError(runState, 'expand', expandResult.error || 'Content expansion failed');
       }
@@ -235,7 +235,7 @@ export class Pipeline {
       }
 
       if (stage === 'draft' || (stage !== 'draft' && !runState.draft)) {
-        const draftResult = await DraftAgent.createDraft(runState.outline!);
+        const draftResult = await DraftAgent.generateDraft(runState.outline!);
         if (!draftResult.success) {
           return await this.handleStageError(runState, 'draft', draftResult.error || 'Draft creation failed');
         }
@@ -245,7 +245,7 @@ export class Pipeline {
       }
 
       if (stage === 'expand' || (stage !== 'expand' && !runState.expanded)) {
-        const expandResult = await ExpandAgent.expandContent(runState.draft!);
+        const expandResult = await ExpandAgent.expandDraft(runState.draft!);
         if (!expandResult.success) {
           return await this.handleStageError(runState, 'expand', expandResult.error || 'Content expansion failed');
         }

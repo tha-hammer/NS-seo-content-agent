@@ -130,7 +130,22 @@ Return a comprehensive outline that provides genuine value while optimizing for 
 
       // Validate the output against our schema
       try {
-        const parsed = JSON.parse(output);
+        // Try to parse JSON, handle cases where LLM returns non-JSON
+        let parsed;
+        try {
+          parsed = JSON.parse(output);
+        } catch (jsonError) {
+          // If JSON parsing fails, try to extract JSON from the text
+          const jsonMatch = output.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[0]);
+          } else {
+            return {
+              success: false,
+              error: `Failed to parse JSON from outline output: ${jsonError.message}. Output: ${output.substring(0, 200)}...`
+            };
+          }
+        }
         
         // Normalize field names to match our schema
         const normalized = {
