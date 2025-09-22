@@ -1,4 +1,5 @@
 import type { RunResult } from '@openai/agents';
+PublishedSchema
 
 export function extractAgentOutput(result: RunResult<any, any>): string | null {
   // Try to extract output from the current step
@@ -42,13 +43,16 @@ export function extractAgentOutput(result: RunResult<any, any>): string | null {
 
 export function parseJsonResponse(output: string): { success: boolean; data?: any; error?: string } {
   try {
-    return { success: true, data: JSON.parse(output) };
+    // Try to repair and parse the full output first
+    const repaired = jsonRepair(output);
+    return { success: true, data: JSON.parse(repaired) };
   } catch (jsonError) {
-    // If JSON parsing fails, try to extract JSON from the text
+    // If that fails, try to extract a JSON substring and repair/parse it
     const jsonMatch = output.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        return { success: true, data: JSON.parse(jsonMatch[0]) };
+        const repaired = jsonRepair(jsonMatch[0]);
+        return { success: true, data: JSON.parse(repaired) };
       } catch (innerError) {
         return {
           success: false,

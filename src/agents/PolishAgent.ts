@@ -87,7 +87,8 @@ Return STRICT JSON matching the ExpandedSchema with:
 - **imagePlaceholders**: Updated alt text for inclusivity if needed
 - **eatSignals**: Preserved E-E-A-T indicators
 
-Focus on creating content that serves all users effectively while maintaining strong SEO performance and expert authority.`;
+Focus on creating content that serves all users effectively while maintaining strong SEO performance and expert authority.
+You want it to come off like a friend explaining something to another friend. Still from a "we're the experts" type of vibe that still feels friendly. You want to build more trust and make the article flow in a way that isn't just dealing with pure fact. `;
 
 interface PolishResult {
   success: boolean;

@@ -2,6 +2,7 @@ import { Agent, run } from '@openai/agents';
 import { getConfig } from '../config.js';
 import { DraftSchema, type Draft, type Outline } from '../schemas.js';
 import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
+import { jsonRepair } from '@toolsycc/json-repair';
 
 const DRAFT_INSTRUCTIONS = `You are the Draft Agent, specialized in creating concise, well-cited initial draft content from structured outlines for RV and recreational vehicle topics.
 
@@ -189,7 +190,9 @@ Return the enhanced draft as JSON matching the schema.`;
       }
 
       try {
-        const validatedDraft = DraftSchema.parse(JSON.parse(output));
+        // const validatedDraft = DraftSchema.parse(JSON.parse(output));
+        const repairedJson = jsonRepair(output);
+        const validatedDraft = DraftSchema.parse(JSON.parse(repairedJson));
         return {
           success: true,
           data: validatedDraft
@@ -252,7 +255,9 @@ Return the updated draft as JSON.`;
       }
 
       try {
-        const validatedDraft = DraftSchema.parse(JSON.parse(output));
+        // const validatedDraft = DraftSchema.parse(JSON.parse(output));
+        const repairedJson = jsonRepair(output);
+        const validatedDraft = DraftSchema.parse(JSON.parse(repairedJson));
         return {
           success: true,
           data: validatedDraft

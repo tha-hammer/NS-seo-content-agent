@@ -2,6 +2,7 @@ import { Agent, run } from '@openai/agents';
 import { getConfig } from '../config.js';
 import { ExpandedSchema, type Expanded, type Draft } from '../schemas.js';
 import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
+import { jsonRepair } from '@toolsycc/json-repair';
 
 const EXPAND_INSTRUCTIONS = `You are the Expand Agent, specialized in taking concise initial drafts and expanding them with comprehensive content, tables, examples, checklists, image placeholders, and E-E-A-T elements for RV and recreational vehicle topics.
 
@@ -84,7 +85,9 @@ Return STRICT JSON matching the ExpandedSchema:
 - imagePlaceholders: Array of strategic image suggestions with alt text
 - eatSignals: Author bio, reviewer info, fact-check status, review date
 
-Focus on creating content that establishes clear expertise and provides exceptional value to RV enthusiasts while maintaining strong search optimization.`;
+Focus on creating content that establishes clear expertise and provides exceptional value to RV enthusiasts while maintaining strong search optimization.
+You want it to come off like a friend explaining something to another friend. Still from a "we're the experts" type of vibe that still feels friendly. You want to build more trust and make the article flow in a way that isn't just dealing with pure fact. 
+`;
 
 interface ExpandResult {
   success: boolean;
@@ -231,7 +234,9 @@ Return the enhanced expanded content as JSON.`;
       }
 
       try {
-        const validatedExpanded = ExpandedSchema.parse(JSON.parse(output));
+        // const validatedExpanded = ExpandedSchema.parse(JSON.parse(output));
+        const repairedJson = jsonRepair(output);
+        const validatedExpanded = ExpandedSchema.parse(JSON.parse(repairedJson));
         return {
           success: true,
           data: validatedExpanded
