@@ -42,12 +42,12 @@ Here’s how you can use it:
 
 ````javascript
 // ...existing code...
-import { jsonRepair } from '@toolsycc/json-repair';
+import { repairJson } from '@toolsycc/json-repair';
 
 // Replace your current JSON.parse usage like this:
 try {
   // Assume 'output' is the raw string from LLM
-  const repairedJson = jsonRepair(output);
+  const repairedJson = repairJson(output);
   const parsed = JSON.parse(repairedJson);
   // ...continue processing...
 } catch (err) {
@@ -62,7 +62,7 @@ try {
    ```bash
    npm install @toolsycc/json-repair
    ```
-2. Use `jsonRepair(output)` before `JSON.parse`.
+2. Use `repairJson(output)` before `JSON.parse`.
 
 This will clean up control characters and other common issues, allowing your pipeline to continue.
 
@@ -79,7 +79,7 @@ _**Assistant**_
 Here’s how to add `json-repair` to your snippet so malformed JSON from the LLM is fixed before parsing and validation:
 
 ````typescript
-import { jsonRepair } from '@toolsycc/json-repair'; // Add this import at the top
+import { repairJson } from '@toolsycc/json-repair'; // Add this import at the top
 
 // ...existing code...
 
@@ -87,15 +87,15 @@ import { jsonRepair } from '@toolsycc/json-repair'; // Add this import at the to
 const validatedDraft = DraftSchema.parse(JSON.parse(output));
 
 // With this:
-const repairedJson = jsonRepair(output);
+const repairedJson = repairJson(output);
 const validatedDraft = DraftSchema.parse(JSON.parse(repairedJson));
 
 // ...existing code...
 ````
 
 **Summary:**  
-- Import `jsonRepair` at the top.
-- Use `jsonRepair(output)` before `JSON.parse`.
+- Import `repairJson` at the top.
+- Use `repairJson(output)` before `JSON.parse`.
 
 This will help prevent pipeline failures due to malformed JSON from the LLM.
 
@@ -113,19 +113,19 @@ Here’s how to use `json-repair` in your `parseJsonResponse` function.
 This will attempt to repair the JSON before parsing, both for the full output and for any extracted JSON substring.
 
 ````typescript
-import { jsonRepair } from '@toolsycc/json-repair'; // Add this import at the top
+import { repairJson } from '@toolsycc/json-repair'; // Add this import at the top
 
 export function parseJsonResponse(output: string): { success: boolean; data?: any; error?: string } {
   try {
     // Try to repair and parse the full output first
-    const repaired = jsonRepair(output);
+    const repaired = repairJson(output);
     return { success: true, data: JSON.parse(repaired) };
   } catch (jsonError) {
     // If that fails, try to extract a JSON substring and repair/parse it
     const jsonMatch = output.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        const repaired = jsonRepair(jsonMatch[0]);
+        const repaired = repairJson(jsonMatch[0]);
         return { success: true, data: JSON.parse(repaired) };
       } catch (innerError) {
         return {
@@ -144,8 +144,8 @@ export function parseJsonResponse(output: string): { success: boolean; data?: an
 ````
 
 **Summary:**  
-- Import `jsonRepair`.
-- Use `jsonRepair` before every `JSON.parse` attempt.  
+- Import `repairJson`.
+- Use `repairJson` before every `JSON.parse` attempt.  
 This will make your function much more robust to malformed JSON from LLMs.
 
 ---

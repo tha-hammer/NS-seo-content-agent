@@ -2,7 +2,7 @@ import { Agent, run } from '@openai/agents';
 import { getConfig } from '../config.js';
 import { ExpandedSchema, type Expanded, type Draft } from '../schemas.js';
 import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
-import { jsonRepair } from '@toolsycc/json-repair';
+import { repairJson } from '@toolsycc/json-repair';
 
 const EXPAND_INSTRUCTIONS = `You are the Expand Agent, specialized in taking concise initial drafts and expanding them with comprehensive content, tables, examples, checklists, image placeholders, and E-E-A-T elements for RV and recreational vehicle topics.
 
@@ -235,7 +235,7 @@ Return the enhanced expanded content as JSON.`;
 
       try {
         // const validatedExpanded = ExpandedSchema.parse(JSON.parse(output));
-        const repairedJson = jsonRepair(output);
+        const repairedJson = repairJson(output);
         const validatedExpanded = ExpandedSchema.parse(JSON.parse(repairedJson));
         return {
           success: true,

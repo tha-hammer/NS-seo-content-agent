@@ -1,5 +1,5 @@
 import type { RunResult } from '@openai/agents';
-PublishedSchema
+import { repairJson } from '@toolsycc/json-repair';
 
 export function extractAgentOutput(result: RunResult<any, any>): string | null {
   // Try to extract output from the current step
@@ -44,15 +44,29 @@ export function extractAgentOutput(result: RunResult<any, any>): string | null {
 export function parseJsonResponse(output: string): { success: boolean; data?: any; error?: string } {
   try {
     // Try to repair and parse the full output first
-    const repaired = jsonRepair(output);
-    return { success: true, data: JSON.parse(repaired) };
+    const repaired = repairJson(output);
+    const parsed = JSON.parse(repaired);
+    // Ensure frontmatter is always an object
+    if (parsed && typeof parsed === 'object') {
+      if (typeof parsed.frontmatter !== 'object' || parsed.frontmatter === undefined || parsed.frontmatter === null) {
+        parsed.frontmatter = {};
+      }
+    }
+    return { success: true, data: parsed };
   } catch (jsonError) {
     // If that fails, try to extract a JSON substring and repair/parse it
     const jsonMatch = output.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        const repaired = jsonRepair(jsonMatch[0]);
-        return { success: true, data: JSON.parse(repaired) };
+        const repaired = repairJson(jsonMatch[0]);
+        const parsed = JSON.parse(repaired);
+        // Ensure frontmatter is always an object
+        if (parsed && typeof parsed === 'object') {
+          if (typeof parsed.frontmatter !== 'object' || parsed.frontmatter === undefined || parsed.frontmatter === null) {
+            parsed.frontmatter = {};
+          }
+        }
+        return { success: true, data: parsed };
       } catch (innerError) {
         return {
           success: false,

@@ -4,7 +4,7 @@ import { getConfig } from '@/config';
 import fs from 'fs/promises';
 import path from 'path';
 import { createHash } from 'crypto';
-import { jsonRepair } from '@toolsycc/json-repair';
+import { repairJson } from '@toolsycc/json-repair';
 
 const PUBLISHER_INSTRUCTIONS = `You are the Publisher Agent, responsible for converting finalized content into publishable markdown files and managing the publication process.
 
@@ -85,7 +85,7 @@ Generate the markdown content and publication metadata.`;
 
       // Parse and validate the response matches our schema
       //const validation = PublishedSchema.safeParse(JSON.parse(output));
-      const repairedJson = jsonRepair(output);
+      const repairedJson = repairJson(output);
       const validation = PublishedSchema.parse(JSON.parse(repairedJson));
 
       if (!validation.success) {

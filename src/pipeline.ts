@@ -9,7 +9,7 @@ import { getConfig } from '@/config';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { jsonRepair } from '@toolsycc/json-repair';
+import { repairJson } from '@toolsycc/json-repair';
 
 export type PipelineStage = 'outline' | 'draft' | 'expand' | 'polish' | 'finalize' | 'publish' | 'complete';
 export type PipelineBucket = 'daily' | 'weekly' | 'monthly';
@@ -321,7 +321,7 @@ export class Pipeline {
 
       const stateData = await fs.readFile(statePath, 'utf-8');
       //const stateObj = JSON.parse(stateData);
-      const repairedJson = jsonRepair(stateData);
+      const repairedJson = repairJson(stateData);
       const stateObj = JSON.parse(repairedJson);
 
       // Validate state against schema
