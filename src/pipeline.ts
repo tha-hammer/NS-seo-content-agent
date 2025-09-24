@@ -88,13 +88,7 @@ export class Pipeline {
 
       // Stage 2: Draft Creation
       this.progressFeedback.startStage('draft', 'Writing initial content with citations');
-      const draftResult = await DraftAgent.generateDraft(runState.outline!);
-      if (!draftResult.success) {
-        this.progressFeedback.failStage('draft', draftResult.error || 'Draft creation failed');
-        return await this.handleStageError(runState, 'draft', draftResult.error || 'Draft creation failed');
-      }
-
-      runState.draft = draftResult.data;
+      runState.draft = await b.GenerateDraft(runState.outline!);
       const draftWordCount = (runState.draft.markdownContent || runState.draft.content || '').split(/\s+/).length;
       this.progressFeedback.completeStage('draft', {
         'Word Count': draftWordCount,
@@ -108,13 +102,7 @@ export class Pipeline {
 
       // Stage 3: Content Expansion
       this.progressFeedback.startStage('expand', 'Enriching with tables, examples, and E-E-A-T signals');
-      const expandResult = await ExpandAgent.expandDraft(runState.draft!);
-      if (!expandResult.success) {
-        this.progressFeedback.failStage('expand', expandResult.error || 'Content expansion failed');
-        return await this.handleStageError(runState, 'expand', expandResult.error || 'Content expansion failed');
-      }
-
-      runState.expanded = expandResult.data;
+      runState.expanded = await b.ExpandDraft(runState.draft!);
       const expandedWordCount = (runState.expanded.markdownContent || runState.expanded.content || '').split(/\s+/).length;
       const baseDraftWordCount = (runState.draft!.markdownContent || runState.draft!.content || '').split(/\s+/).length;
       this.progressFeedback.completeStage('expand', {
@@ -130,13 +118,7 @@ export class Pipeline {
 
       // Stage 4: Content Polishing
       this.progressFeedback.startStage('polish', 'Polishing for clarity, scannability, and inclusivity');
-      const polishResult = await PolishAgent.polishContent(runState.expanded!);
-      if (!polishResult.success) {
-        this.progressFeedback.failStage('polish', polishResult.error || 'Content polishing failed');
-        return await this.handleStageError(runState, 'polish', polishResult.error || 'Content polishing failed');
-      }
-
-      runState.expanded = polishResult.data; // Update expanded with polished content
+      runState.expanded = await b.PolishContent(runState.expanded!); // Update expanded with polished content
       this.progressFeedback.completeStage('polish', {
         'Readability Grade': runState.expanded.qualityMetrics?.readabilityGrade || 'N/A',
         'Scannability': 'Optimized',
@@ -150,13 +132,7 @@ export class Pipeline {
 
       // Stage 5: Content Finalization
       this.progressFeedback.startStage('finalize', 'Applying SEO optimization and schema markup');
-      const finalizeResult = await FinalizeAgent.finalizeContent(runState.expanded!);
-      if (!finalizeResult.success) {
-        this.progressFeedback.failStage('finalize', finalizeResult.error || 'Content finalization failed');
-        return await this.handleStageError(runState, 'finalize', finalizeResult.error || 'Content finalization failed');
-      }
-
-      runState.final = finalizeResult.data;
+      runState.final = await b.FinalizeContent(runState.expanded!);
       this.progressFeedback.completeStage('finalize', {
         'Title Length': runState.final.frontmatter.title?.length || 0,
         'Meta Description': runState.final.frontmatter.description?.length || 0,
@@ -305,41 +281,25 @@ export class Pipeline {
       }
 
       if (stage === 'draft' || (stage !== 'draft' && !runState.draft)) {
-        const draftResult = await DraftAgent.generateDraft(runState.outline!);
-        if (!draftResult.success) {
-          return await this.handleStageError(runState, 'draft', draftResult.error || 'Draft creation failed');
-        }
-        runState.draft = draftResult.data;
+        runState.draft = await b.GenerateDraft(runState.outline!);
         runState.currentStage = 'expand';
         await this.saveRunState(runState);
       }
 
       if (stage === 'expand' || (stage !== 'expand' && !runState.expanded)) {
-        const expandResult = await ExpandAgent.expandDraft(runState.draft!);
-        if (!expandResult.success) {
-          return await this.handleStageError(runState, 'expand', expandResult.error || 'Content expansion failed');
-        }
-        runState.expanded = expandResult.data;
+        runState.expanded = await b.ExpandDraft(runState.draft!);
         runState.currentStage = 'polish';
         await this.saveRunState(runState);
       }
 
       if (stage === 'polish') {
-        const polishResult = await PolishAgent.polishContent(runState.expanded!);
-        if (!polishResult.success) {
-          return await this.handleStageError(runState, 'polish', polishResult.error || 'Content polishing failed');
-        }
-        runState.expanded = polishResult.data;
+        runState.expanded = await b.PolishContent(runState.expanded!);
         runState.currentStage = 'finalize';
         await this.saveRunState(runState);
       }
 
       if (stage === 'finalize' || !runState.final) {
-        const finalizeResult = await FinalizeAgent.finalizeContent(runState.expanded!);
-        if (!finalizeResult.success) {
-          return await this.handleStageError(runState, 'finalize', finalizeResult.error || 'Content finalization failed');
-        }
-        runState.final = finalizeResult.data;
+        runState.final = await b.FinalizeContent(runState.expanded!);
         runState.currentStage = 'publish';
         await this.saveRunState(runState);
       }

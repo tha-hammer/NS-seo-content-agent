@@ -27627,3 +27627,302 @@ _**Agent (claude-sonnet-4-20250514)**_
 - [ ] 🌡️ Test complete BAML pipeline
 
 
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Grep** path `src/pipeline.ts`
+
+Result:
+
+```
+No matches found
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Grep** path `src/pipeline.ts`
+
+Result:
+
+```
+106-      runState.updatedAt = new Date().toISOString();
+107-      await this.saveRunState(runState);
+108-
+109-      // Stage 3: Content Expansion
+110-      this.progressFeedback.startStage('expand', 'Enriching with tables, examples, and E-E-A-T signals');
+111:      const expandResult = await ExpandAgent.expandDraft(runState.draft!);
+112-      if (!expandResult.success) {
+113-        this.progressFeedback.failStage('expand', expandResult.error || 'Content expansion failed');
+114-        return await this.handleStageError(runState, 'expand', expandResult.error || 'Content expansion failed');
+115-      }
+116-
+--
+313-        runState.currentStage = 'expand';
+314-        await this.saveRunState(runState);
+315-      }
+316-
+317-      if (stage === 'expand' || (stage !== 'expand' && !runState.expanded)) {
+318:        const expandResult = await ExpandAgent.expandDraft(runState.draft!);
+319-        if (!expandResult.success) {
+320-          return await this.handleStageError(runState, 'expand', expandResult.error || 'Content expansion failed');
+321-        }
+322-        runState.expanded = expandResult.data;
+323-        runState.currentStage = 'polish';
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   107→      await this.saveRunState(runState);
+   108→
+   109→      // Stage 3: Content Expansion
+   110→      this.progressFeedback.startStage('expand', 'Enriching with tables, examples, and E-E-A-T signals');
+   111→      runState.expanded = await b.ExpandDraft(runState.draft!);
+   112→      const expandedWordCount = (runState.expanded.markdownContent || runState.expanded.content || '').split(/\s+/).length;
+   113→      const baseDraftWordCount = (runState.draft!.markdownContent || runState.draft!.content || '').split(/\s+/).length;
+   114→      this.progressFeedback.completeStage('expand', {
+   115→        'Word Count': expandedWordCount,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   308→        await this.saveRunState(runState);
+   309→      }
+   310→
+   311→      if (stage === 'expand' || (stage !== 'expand' && !runState.expanded)) {
+   312→        runState.expanded = await b.ExpandDraft(runState.draft!);
+   313→        runState.currentStage = 'polish';
+   314→        await this.saveRunState(runState);
+   315→      }
+   316→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+**Agent task list:**
+- [X] 🌡️ Convert expand stage to use BAML
+- [⚡] 🌡️ Convert polish stage to use BAML
+- [ ] 🌡️ Convert finalize stage to use BAML
+- [ ] 🌡️ Test complete BAML pipeline
+
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Grep** path `src/pipeline.ts`
+
+Result:
+
+```
+124-
+125-      // Stage 4: Content Polishing
+126-      this.progressFeedback.startStage('polish', 'Polishing for clarity, scannability, and inclusivity');
+127:      const polishResult = await PolishAgent.polishContent(runState.expanded!);
+128-      if (!polishResult.success) {
+129-        this.progressFeedback.failStage('polish', polishResult.error || 'Content polishing failed');
+130-        return await this.handleStageError(runState, 'polish', polishResult.error || 'Content polishing failed');
+--
+315-      }
+316-
+317-      if (stage === 'polish') {
+318:        const polishResult = await PolishAgent.polishContent(runState.expanded!);
+319-        if (!polishResult.success) {
+320-          return await this.handleStageError(runState, 'polish', polishResult.error || 'Content polishing failed');
+321-        }
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   123→      await this.saveRunState(runState);
+   124→
+   125→      // Stage 4: Content Polishing
+   126→      this.progressFeedback.startStage('polish', 'Polishing for clarity, scannability, and inclusivity');
+   127→      runState.expanded = await b.PolishContent(runState.expanded!); // Update expanded with polished content
+   128→      this.progressFeedback.completeStage('polish', {
+   129→        'Readability Grade': runState.expanded.qualityMetrics?.readabilityGrade || 'N/A',
+   130→        'Scannability': 'Optimized',
+   131→        'PAA Questions': 'Integrated',
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   308→        await this.saveRunState(runState);
+   309→      }
+   310→
+   311→      if (stage === 'polish') {
+   312→        runState.expanded = await b.PolishContent(runState.expanded!);
+   313→        runState.currentStage = 'finalize';
+   314→        await this.saveRunState(runState);
+   315→      }
+   316→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+**Agent task list:**
+- [X] 🌡️ Convert expand stage to use BAML
+- [X] 🌡️ Convert polish stage to use BAML
+- [⚡] 🌡️ Convert finalize stage to use BAML
+- [ ] 🌡️ Test complete BAML pipeline
+
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Grep** path `src/pipeline.ts`
+
+Result:
+
+```
+138-
+139-      // Stage 5: Content Finalization
+140-      this.progressFeedback.startStage('finalize', 'Applying SEO optimization and schema markup');
+141:      const finalizeResult = await FinalizeAgent.finalizeContent(runState.expanded!);
+142-      if (!finalizeResult.success) {
+143-        this.progressFeedback.failStage('finalize', finalizeResult.error || 'Content finalization failed');
+144-        return await this.handleStageError(runState, 'finalize', finalizeResult.error || 'Content finalization failed');
+--
+315-      }
+316-
+317-      if (stage === 'finalize' || !runState.final) {
+318:        const finalizeResult = await FinalizeAgent.finalizeContent(runState.expanded!);
+319-        if (!finalizeResult.success) {
+320-          return await this.handleStageError(runState, 'finalize', finalizeResult.error || 'Content finalization failed');
+321-        }
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   137→      await this.saveRunState(runState);
+   138→
+   139→      // Stage 5: Content Finalization
+   140→      this.progressFeedback.startStage('finalize', 'Applying SEO optimization and schema markup');
+   141→      runState.final = await b.FinalizeContent(runState.expanded!);
+   142→      this.progressFeedback.completeStage('finalize', {
+   143→        'Title Length': runState.final.frontmatter.title?.length || 0,
+   144→        'Meta Description': runState.final.frontmatter.description?.length || 0,
+   145→        'Schema Objects': runState.final.frontmatter.schema?.length || 0,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   308→        await this.saveRunState(runState);
+   309→      }
+   310→
+   311→      if (stage === 'finalize' || !runState.final) {
+   312→        runState.final = await b.FinalizeContent(runState.expanded!);
+   313→        runState.currentStage = 'publish';
+   314→        await this.saveRunState(runState);
+   315→      }
+   316→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Grep** path `src/pipeline.ts`
+
+Result:
+
+```
+88-
+89-      // Stage 2: Draft Creation
+90-      this.progressFeedback.startStage('draft', 'Writing initial content with citations');
+91:      const draftResult = await DraftAgent.generateDraft(runState.outline!);
+92-      if (!draftResult.success) {
+93-        this.progressFeedback.failStage('draft', draftResult.error || 'Draft creation failed');
+94-        return await this.handleStageError(runState, 'draft', draftResult.error || 'Draft creation failed');
+--
+287-      }
+288-
+289-      if (stage === 'draft' || (stage !== 'draft' && !runState.draft)) {
+290:        const draftResult = await DraftAgent.generateDraft(runState.outline!);
+291-        if (!draftResult.success) {
+292-          return await this.handleStageError(runState, 'draft', draftResult.error || 'Draft creation failed');
+293-        }
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    87→      await this.saveRunState(runState);
+    88→
+    89→      // Stage 2: Draft Creation
+    90→      this.progressFeedback.startStage('draft', 'Writing initial content with citations');
+    91→      runState.draft = await b.GenerateDraft(runState.outline!);
+    92→      const draftWordCount = (runState.draft.markdownContent || runState.draft.content || '').split(/\s+/).length;
+    93→      this.progressFeedback.completeStage('draft', {
+    94→        'Word Count': draftWordCount,
+    95→        'FAQ Blocks': runState.draft.faqBlocks?.length || 0,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   280→        await this.saveRunState(runState);
+   281→      }
+   282→
+   283→      if (stage === 'draft' || (stage !== 'draft' && !runState.draft)) {
+   284→        runState.draft = await b.GenerateDraft(runState.outline!);
+   285→        runState.currentStage = 'expand';
+   286→        await this.saveRunState(runState);
+   287→      }
+   288→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+**Agent task list:**
+- [X] 🌡️ Convert expand stage to use BAML
+- [X] 🌡️ Convert polish stage to use BAML
+- [X] 🌡️ Convert finalize stage to use BAML
+- [⚡] 🌡️ Test complete BAML pipeline
+
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Bash** Test complete BAML pipeline integration
+
+`timeout 45s npm run pipeline "Test RV Topic" --bucket daily`
+
