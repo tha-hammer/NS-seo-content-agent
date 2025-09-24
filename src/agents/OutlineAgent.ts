@@ -113,12 +113,36 @@ Return a comprehensive outline that provides genuine value while optimizing for 
       if (Array.isArray(intentValue)) {
         intentValue = intentValue.length > 0 ? intentValue[0] : 'informational';
       }
-      
+      // Normalize intent value format
+      if (typeof intentValue === 'string') {
+        intentValue = intentValue.toLowerCase();
+        // Map specific values to our enum
+        if (intentValue === 'comparative') intentValue = 'comparative';
+        else if (intentValue === 'informational') intentValue = 'informational';
+        else if (intentValue === 'transactional') intentValue = 'transactional';
+        else intentValue = 'informational'; // fallback
+      }
+
+      let tpbValue = parsed.tpb || parsed.tpbClassification || parsed.tpb_classification;
+      // Convert array TPB to first value if it's an array
+      if (Array.isArray(tpbValue)) {
+        tpbValue = tpbValue.length > 0 ? tpbValue[0] : 'attitude';
+      }
+      // Normalize TPB value format
+      if (typeof tpbValue === 'string') {
+        tpbValue = tpbValue.toLowerCase().replace(/\s+/g, '-');
+        // Map specific values to our enum
+        if (tpbValue === 'perceived-control') tpbValue = 'perceived-control';
+        else if (tpbValue === 'attitude') tpbValue = 'attitude';
+        else if (tpbValue === 'norm') tpbValue = 'norm';
+        else tpbValue = 'attitude'; // fallback
+      }
+
       const normalized = {
         ...parsed,
         funnel: parsed.funnel || parsed.funnelStage || parsed.funnel_stage,
         intent: intentValue,
-        tpb: parsed.tpb || parsed.tpbClassification || parsed.tpb_classification
+        tpb: tpbValue
       };
       
       // Validate the output against our schema
