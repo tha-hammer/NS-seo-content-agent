@@ -91,8 +91,9 @@ Structure:
 
 Focus on clear, concise paragraphs that will be expanded later in the pipeline.`;
 
+      console.log('DEBUG: About to call LLM for draft generation...');
       const result = await run(this.agent, prompt);
-
+      console.log('DEBUG: LLM call completed, processing response...');
       // Extract the output from the response structure
       const output = extractAgentOutput(result);
       

@@ -137,8 +137,11 @@ E-E-A-T Enhancement:
 
 Return the fully expanded content as JSON matching the ExpandedSchema.`;
 
+      console.log('DEBUG: About to call LLM for expanded generation...');
       const result = await run(this.agent, prompt);
-
+      console.log('DEBUG: LLM call completed, processing response...');
+	  
+	  
       // Extract the output from the response structure
       const output = extractAgentOutput(result);
       

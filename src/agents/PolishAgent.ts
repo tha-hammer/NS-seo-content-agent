@@ -132,8 +132,11 @@ Quality Standards:
 
 Return the polished content as JSON matching the ExpandedSchema.`;
 
+      console.log('DEBUG: About to call LLM for polished generation...');
       const result = await run(this.agent, prompt);
-
+      console.log('DEBUG: LLM call completed, processing response...');
+	  
+	  
       const output = extractAgentOutput(result);
       if (!output) {
         return {

@@ -1,0 +1,32 @@
+generators:
+  baml_client:
+    type: typescript
+    output_directory: "../src/baml"
+    output_file: "client.ts"
+
+clients:
+  openai_gpt4_mini:
+    provider: openai
+    options:
+      model: gpt-4o-mini
+      api_key: env.OPENAI_API_KEY
+      temperature: 0.1
+      max_completion_tokens: 4096
+
+  openai_gpt4:
+    provider: openai
+    options:
+      model: gpt-4o
+      api_key: env.OPENAI_API_KEY
+      temperature: 0.1
+      max_completion_tokens: 4096
+
+  openai_structured:
+    provider: openai
+    options:
+      model: gpt-4o-mini
+      api_key: env.OPENAI_API_KEY
+      temperature: 0.1
+      max_completion_tokens: 4096
+      response_format:
+        type: json_object

@@ -80,10 +80,13 @@ Please:
 
 Return the complete finalized content with all optimizations applied.`;
 
-      const response = await run(this.agent, prompt);
-      
+      console.log('DEBUG: About to call LLM for finalized generation...');
+      const result = await run(this.agent, prompt);
+      console.log('DEBUG: LLM call completed, processing response...');     
+
+	  
       // Extract the output from the response structure
-      const output = extractAgentOutput(response);
+      const output = extractAgentOutput(result);
       
       if (!output) {
         return { success: false, error: 'No output received from agent from any source' };
