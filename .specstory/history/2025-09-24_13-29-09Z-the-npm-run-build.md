@@ -19686,3 +19686,139 @@ I've successfully recreated ALL the BAML files that were lost during the git con
 
 **The BAML implementation is now fully restored and ready for production use. This should eliminate the LLM output variation issues that were causing Zod validation failures.**
 
+---
+
+_**User**_
+
+FUCK. Another fucking secret in the fucking specbase history: remote:       —— OpenAI API Key ————————————————————————————————————
+remote:        locations:
+remote:          - commit: d24b642b99bc6e0025b51cf9c224bc6762766cdc
+remote:            path: .specstory/history/2025-09-24_13-29-09Z-the-npm-run-build.md:16652
+remote:
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/tha-hammer/NS-seo-content-agent/security/secret-scanning/unblock-secret/339c1XIoO8m4oawbeP3rmWTbt5J
+
+---
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+I need to remove the API key from the specstory history file. Let me check and clean it:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Read** `./.specstory/history/2025-09-24_13-29-09Z-the-npm-run-build.md`
+
+Result:
+
+```
+16640→
+ 16641→_**Agent (claude-sonnet-4-20250514)**_
+ 16642→
+ 16643→Tool use: **Read** `./.specstory/history/2025-08-21_12-18-45Z-the-seo-md-files.md`
+ 16644→
+ 16645→Result:
+ 16646→
+ 16647→\```
+ 16648→26340→
+ 16649→ 26341→Result:
+ 16650→ 26342→
+ 16651→ 26343→\\```
+ 16652→ 26344→1→OPENAI_API_KEY=**********
+ 16653→ 26345→     2→   OPENAI_MODEL_WRITER=gpt-4.1-mini
+ 16654→ 26346→     3→   OPENAI_MODEL_EDITOR=gpt-4.1
+ 16655→ 26347→     4→   OUTPUT_DIR=./output
+ 16656→ 26348→     5→   RUNS_DIR=./runs
+ 16657→ 26349→     6→   BACKUP_DIR=./backup
+ 16658→\```
+ 16659→
+ 16660→_**Agent (claude-sonnet-4-20250514)**_
+ 16661→
+ 16662→I found the leaked API key in the specstory file. We need to remove this from git history. The safest approach is to:
+ 16663→
+ 16664→1. Remove the sensitive file from git tracking
+ 16665→2. Rewrite the commit to exclude it
+ 16666→3. Add it to .gitignore
+ 16667→
+ 16668→_**Agent (claude-sonnet-4-20250514)**_
+ 16669→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+I found the leaked API key. Let me remove it from the specstory file:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Error:
+
+```
+<tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Read** `./.specstory/history/2025-09-24_13-29-09Z-the-npm-run-build.md`
+
+Result:
+
+```
+16640→
+ 16641→_**Agent (claude-sonnet-4-20250514)**_
+ 16642→
+ 16643→Tool use: **Read** `./.specstory/history/2025-08-21_12-18-45Z-the-seo-md-files.md`
+ 16644→
+ 16645→Result:
+ 16646→
+ 16647→\```
+ 16648→26340→
+ 16649→ 26341→Result:
+ 16650→ 26342→
+ 16651→ 26343→\\```
+ 16652→ 26344→1→OPENAI_API_KEY=**********
+ 16653→ 26345→     2→   OPENAI_MODEL_WRITER=gpt-4.1-mini
+ 16654→ 26346→     3→   OPENAI_MODEL_EDITOR=gpt-4.1
+ 16655→ 26347→     4→   OUTPUT_DIR=./output
+ 16656→ 26348→     5→   RUNS_DIR=./runs
+ 16657→ 26349→     6→   BACKUP_DIR=./backup
+ 16658→\```
+ 16659→
+ 16660→_**Agent (claude-sonnet-4-20250514)**_
+ 16661→
+ 16662→I found the leaked API key in the specstory file. We need to remove this from git history. The safest approach is to:
+ 16663→
+ 16664→1. Remove the sensitive file from git tracking
+ 16665→2. Rewrite the commit to exclude it
+ 16666→3. Add it to .gitignore
+ 16667→
+ 16668→_**Agent (claude-sonnet-4-20250514)**_
+ 16669→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Error:
+
+```
+<tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Let me use a different approach to remove the API key:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Bash** Replace API key with redacted version in specstory file
+
+`sed -i 's/**********/sk-[REDACTED]/g' .specstory/history/2025-09-24_13-29-09Z-the-npm-run-build.md`
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Bash** Stage the cleaned specstory file
+
+`git add .specstory/history/2025-09-24_13-29-09Z-the-npm-run-build.md`
+
