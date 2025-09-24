@@ -35,6 +35,7 @@
   "license": "ISC",
   "dependencies": {
     "@ai-sdk/openai": "^2.0.34",
+    "@boundaryml/baml": "^0.208.3",
     "@openai/agents": "^0.0.17",
     "@toolsycc/json-repair": "^0.1.22",
     "ai": "^5.0.51",

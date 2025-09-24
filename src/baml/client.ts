@@ -278,6 +278,97 @@ Return a JSON object that matches the Expanded schema exactly.`;
     return object as Expanded;
   }
 
+  async polishContent(expanded: Expanded): Promise<Expanded> {
+    const prompt = `You are the Polish Agent, specialized in refining expanded RV content for maximum clarity, scannability, and user engagement while ensuring comprehensive coverage of user questions and inclusive language.
+
+## Your Task
+Polish and refine expanded content to eliminate clarity issues, improve scannability, remove repetition, ensure all People Also Ask (PAA) questions are answered, use inclusive language, tighten headings, and verify content quality.
+
+Polish this expanded content:
+${JSON.stringify(expanded, null, 2)}
+
+Return a JSON object that matches the Expanded schema exactly.`;
+
+    const { object } = await generateObject({
+      model: openai('gpt-4o'),
+      prompt,
+      schema: {
+        type: 'object',
+        properties: {
+          frontmatter: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              description: { type: 'string' },
+              slug: { type: 'string' },
+              date: { type: 'string' },
+              author: { type: 'string' },
+              tags: { type: 'array', items: { type: 'string' } },
+              category: { type: 'string' },
+              funnel: { type: 'string', enum: ['TOF', 'MOF', 'BOF'] },
+              intent: { type: 'string', enum: ['informational', 'comparative', 'transactional'] },
+              primaryKeyword: { type: 'string' },
+              secondaryKeywords: { type: 'array', items: { type: 'string' } },
+              wordcount: { type: 'number' },
+              readingTime: { type: 'number' },
+              schema: { type: 'array', items: { type: 'object' } }
+            },
+            required: ['title', 'description', 'slug', 'date', 'author', 'tags', 'category', 'funnel', 'intent', 'primaryKeyword', 'secondaryKeywords']
+          },
+          content: { type: 'string' },
+          markdownContent: { type: 'string' },
+          evidence: {
+            type: 'object',
+            properties: {
+              claims: { type: 'array', items: { type: 'object' } },
+              citations: { type: 'array', items: { type: 'object' } },
+              expertQuotes: { type: 'array', items: { type: 'object' } }
+            },
+            required: ['claims', 'citations', 'expertQuotes']
+          },
+          imagePlaceholders: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                altText: { type: 'string' },
+                position: { type: 'string' },
+                description: { type: 'string' }
+              },
+              required: ['altText', 'position', 'description']
+            }
+          },
+          eatSignals: {
+            type: 'object',
+            properties: {
+              authorBio: { type: 'string' },
+              reviewer: { type: 'string' },
+              factChecked: { type: 'boolean' },
+              reviewDate: { type: 'string' }
+            },
+            required: ['authorBio', 'factChecked', 'reviewDate']
+          },
+          qualityMetrics: {
+            type: 'object',
+            properties: {
+              readabilityGrade: { type: 'number' },
+              fleschKincaidScore: { type: 'number' },
+              averageSentenceLength: { type: 'number' },
+              passiveVoicePercent: { type: 'number' },
+              keywordDensity: { type: 'object' },
+              brandVoiceAlignment: { type: 'object' },
+              toneAlignment: { type: 'object' }
+            }
+          }
+        },
+        required: ['frontmatter', 'content', 'evidence', 'imagePlaceholders', 'eatSignals']
+      },
+      temperature: 0.1,
+    });
+
+    return object as Expanded;
+  }
+
   async finalizeContent(expanded: Expanded): Promise<Final> {
     const prompt = `You are the Finalize Agent, responsible for the final SEO optimization and preparation of content for publication.
 

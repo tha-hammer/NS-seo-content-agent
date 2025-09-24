@@ -5,15 +5,15 @@ enum FunnelStage {
 }
 
 enum SearchIntent {
-  informational
-  comparative
-  transactional
+  Informational
+  Comparative
+  Transactional
 }
 
 enum TPBClassification {
-  attitude
-  norm
-  perceived_control @@alias("perceived-control")
+  Attitude
+  Norm
+  Perceived_control @@alias("perceived-control")
 }
 
 class Metadata {
@@ -63,7 +63,7 @@ class Frontmatter {
   secondaryKeywords string[]
   wordcount int?
   readingTime int?
-  schema object[]?
+  schema string[]?
 }
 
 class HowToStep {
@@ -91,9 +91,9 @@ class Draft {
 }
 
 class Evidence {
-  claims object[]
-  citations object[]
-  expertQuotes object[]
+  claims string[]
+  citations string[]
+  expertQuotes string[]
 }
 
 class ImagePlaceholder {
@@ -114,9 +114,9 @@ class QualityMetrics {
   fleschKincaidScore float?
   averageSentenceLength float?
   passiveVoicePercent float?
-  keywordDensity object?
-  brandVoiceAlignment object?
-  toneAlignment object?
+  keywordDensity string?
+  brandVoiceAlignment string?
+  toneAlignment string?
 }
 
 class Expanded {
@@ -154,5 +154,5 @@ class Published {
   markdownContent string
   filePath string
   backupPath string
-  validation object
+  validation string
 }

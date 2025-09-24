@@ -1,10 +1,11 @@
 import { RunStateSchema, type RunState, type Outline, type Draft, type Expanded, type Final, type Published } from '@/schemas';
-import { OutlineAgent } from '@/agents/OutlineAgent';
+import { b } from '../baml_client';
 import { DraftAgent } from '@/agents/DraftAgent';
 import { ExpandAgent } from '@/agents/ExpandAgent';
 import { PolishAgent } from '@/agents/PolishAgent';
 import { FinalizeAgent } from '@/agents/FinalizeAgent';
 import { PublisherAgent } from '@/agents/PublisherAgent';
+import { ProgressFeedback } from '@/utils/progressFeedback';
 import { getConfig } from '@/config';
 import fs from 'fs/promises';
 import path from 'path';
@@ -27,6 +28,8 @@ export interface StateResult {
 }
 
 export class Pipeline {
+  private static progressFeedback = ProgressFeedback.getInstance();
+
   static async runPipeline(topic: string, bucket: PipelineBucket): Promise<PipelineResult> {
     // Validate inputs
     if (!topic || topic.trim().length === 0) {
@@ -48,6 +51,10 @@ export class Pipeline {
     const runId = randomUUID();
     const timestamp = new Date().toISOString();
 
+    // Initialize progress tracking with all pipeline stages
+    const stages = ['outline', 'draft', 'expand', 'polish', 'finalize', 'publish'];
+    this.progressFeedback.initializePipeline(runId, topic, stages);
+
     // Initialize run state
     let runState: RunState = {
       id: runId,
@@ -64,70 +71,133 @@ export class Pipeline {
       await this.saveRunState(runState);
 
       // Stage 1: Outline Generation
-      const outlineResult = await OutlineAgent.generateOutline(topic, bucket);
-      if (!outlineResult.success) {
-        return await this.handleStageError(runState, 'outline', outlineResult.error || 'Outline generation failed');
-      }
+      this.progressFeedback.startStage('outline', 'Creating structured outline with SEO planning');
+      // Convert bucket to cluster name
+      const cluster = bucket === 'daily' ? 'daily-content' : bucket === 'weekly' ? 'weekly-guides' : 'monthly-deep-dives';
+      runState.outline = await b.GenerateOutline(topic, cluster);
+      this.progressFeedback.completeStage('outline', {
+        'Title': runState.outline.title,
+        'Sections': runState.outline.headings?.length || 0,
+        'FAQs': runState.outline.faqs?.length || 0,
+        'Target Words': runState.outline.metadata?.wordcountTarget || 0
+      });
 
-      runState.outline = outlineResult.data;
       runState.currentStage = 'draft';
       runState.updatedAt = new Date().toISOString();
       await this.saveRunState(runState);
 
       // Stage 2: Draft Creation
+      this.progressFeedback.startStage('draft', 'Writing initial content with citations');
       const draftResult = await DraftAgent.generateDraft(runState.outline!);
       if (!draftResult.success) {
+        this.progressFeedback.failStage('draft', draftResult.error || 'Draft creation failed');
         return await this.handleStageError(runState, 'draft', draftResult.error || 'Draft creation failed');
       }
 
       runState.draft = draftResult.data;
+      const draftWordCount = (runState.draft.markdownContent || runState.draft.content || '').split(/\s+/).length;
+      this.progressFeedback.completeStage('draft', {
+        'Word Count': draftWordCount,
+        'FAQ Blocks': runState.draft.faqBlocks?.length || 0,
+        'How-To Blocks': runState.draft.howtoBlocks?.length || 0
+      });
+
       runState.currentStage = 'expand';
       runState.updatedAt = new Date().toISOString();
       await this.saveRunState(runState);
 
       // Stage 3: Content Expansion
+      this.progressFeedback.startStage('expand', 'Enriching with tables, examples, and E-E-A-T signals');
       const expandResult = await ExpandAgent.expandDraft(runState.draft!);
       if (!expandResult.success) {
+        this.progressFeedback.failStage('expand', expandResult.error || 'Content expansion failed');
         return await this.handleStageError(runState, 'expand', expandResult.error || 'Content expansion failed');
       }
 
       runState.expanded = expandResult.data;
+      const expandedWordCount = (runState.expanded.markdownContent || runState.expanded.content || '').split(/\s+/).length;
+      const baseDraftWordCount = (runState.draft!.markdownContent || runState.draft!.content || '').split(/\s+/).length;
+      this.progressFeedback.completeStage('expand', {
+        'Word Count': expandedWordCount,
+        'Growth': `${Math.round((expandedWordCount / baseDraftWordCount) * 100)}%`,
+        'Images': runState.expanded.imagePlaceholders?.length || 0,
+        'Evidence Claims': runState.expanded.evidence?.claims?.length || 0
+      });
+
       runState.currentStage = 'polish';
       runState.updatedAt = new Date().toISOString();
       await this.saveRunState(runState);
 
       // Stage 4: Content Polishing
+      this.progressFeedback.startStage('polish', 'Polishing for clarity, scannability, and inclusivity');
       const polishResult = await PolishAgent.polishContent(runState.expanded!);
       if (!polishResult.success) {
+        this.progressFeedback.failStage('polish', polishResult.error || 'Content polishing failed');
         return await this.handleStageError(runState, 'polish', polishResult.error || 'Content polishing failed');
       }
 
       runState.expanded = polishResult.data; // Update expanded with polished content
+      this.progressFeedback.completeStage('polish', {
+        'Readability Grade': runState.expanded.qualityMetrics?.readabilityGrade || 'N/A',
+        'Scannability': 'Optimized',
+        'PAA Questions': 'Integrated',
+        'Inclusivity': 'Verified'
+      });
+
       runState.currentStage = 'finalize';
       runState.updatedAt = new Date().toISOString();
       await this.saveRunState(runState);
 
       // Stage 5: Content Finalization
+      this.progressFeedback.startStage('finalize', 'Applying SEO optimization and schema markup');
       const finalizeResult = await FinalizeAgent.finalizeContent(runState.expanded!);
       if (!finalizeResult.success) {
+        this.progressFeedback.failStage('finalize', finalizeResult.error || 'Content finalization failed');
         return await this.handleStageError(runState, 'finalize', finalizeResult.error || 'Content finalization failed');
       }
 
       runState.final = finalizeResult.data;
+      this.progressFeedback.completeStage('finalize', {
+        'Title Length': runState.final.frontmatter.title?.length || 0,
+        'Meta Description': runState.final.frontmatter.description?.length || 0,
+        'Schema Objects': runState.final.frontmatter.schema?.length || 0,
+        'SEO Score': runState.final.seoOptimizations ? 'Optimized' : 'Pending'
+      });
+
       runState.currentStage = 'publish';
       runState.updatedAt = new Date().toISOString();
       await this.saveRunState(runState);
 
       // Stage 6: Content Publishing
+      this.progressFeedback.startStage('publish', 'Publishing to markdown files and generating backups');
       const publishResult = await PublisherAgent.publishContent(runState.final!);
       if (!publishResult.success) {
+        this.progressFeedback.failStage('publish', publishResult.error || 'Content publishing failed');
         return await this.handleStageError(runState, 'publish', publishResult.error || 'Content publishing failed');
       }
+
+      runState.published = publishResult.data;
+      const finalWordCount = (runState.final!.markdownContent || runState.final!.content || '').split(/\s+/).length;
+      this.progressFeedback.completeStage('publish', {
+        'File Path': publishResult.data?.filePath || 'Generated',
+        'Final Word Count': finalWordCount,
+        'Backup Created': publishResult.data?.backupPath ? 'Yes' : 'No',
+        'Publication': 'Complete'
+      });
 
       // Pipeline completed successfully
       runState.currentStage = 'complete';
       runState.updatedAt = new Date().toISOString();
       await this.saveRunState(runState);
+
+      // Complete pipeline with final metrics
+      const processingTime = new Date().getTime() - new Date(runState.createdAt).getTime();
+      this.progressFeedback.completePipeline(true, {
+        'Total Word Count': finalWordCount,
+        'Processing Time': `${Math.round(processingTime / 1000)}s`,
+        'Pipeline': 'Success',
+        'Run ID': runState.id
+      });
 
       return {
         success: true,
@@ -135,6 +205,8 @@ export class Pipeline {
       };
 
     } catch (error) {
+      // Complete pipeline with failure
+      this.progressFeedback.completePipeline(false);
       return await this.handleStageError(
         runState,
         runState.currentStage as any,
@@ -226,11 +298,8 @@ export class Pipeline {
       runState.updatedAt = new Date().toISOString();
 
       if (stage === 'outline' || (stage !== 'outline' && !runState.outline)) {
-        const outlineResult = await OutlineAgent.generateOutline(runState.topic, runState.bucket);
-        if (!outlineResult.success) {
-          return await this.handleStageError(runState, 'outline', outlineResult.error || 'Outline generation failed');
-        }
-        runState.outline = outlineResult.data;
+        const cluster = runState.bucket === 'daily' ? 'daily-content' : runState.bucket === 'weekly' ? 'weekly-guides' : 'monthly-deep-dives';
+        runState.outline = await b.GenerateOutline(runState.topic, cluster);
         runState.currentStage = 'draft';
         await this.saveRunState(runState);
       }

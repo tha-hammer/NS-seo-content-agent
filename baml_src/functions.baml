@@ -1,5 +1,5 @@
 function GenerateOutline(topic: string, cluster: string) -> Outline {
-  client "openai_structured"
+  client OpenaiWriter
   prompt #"
     You are the Outline Agent, specialized in creating comprehensive, SEO-optimized outlines for RV and recreational vehicle content.
 
@@ -39,7 +39,7 @@ function GenerateOutline(topic: string, cluster: string) -> Outline {
 }
 
 function GenerateDraft(outline: Outline) -> Draft {
-  client "openai_structured"
+  client OpenaiWriter
   prompt #"
     You are the Draft Agent, specialized in creating concise, well-cited initial draft content from structured outlines for RV and recreational vehicle topics.
 
@@ -73,7 +73,7 @@ function GenerateDraft(outline: Outline) -> Draft {
 }
 
 function ExpandDraft(draft: Draft) -> Expanded {
-  client "openai_structured"
+  client OpenaiEditor
   prompt #"
     You are the Expand Agent, specialized in taking concise initial drafts and expanding them with comprehensive content, tables, examples, checklists, image placeholders, and E-E-A-T elements for RV and recreational vehicle topics.
 
@@ -103,7 +103,7 @@ function ExpandDraft(draft: Draft) -> Expanded {
 }
 
 function PolishContent(expanded: Expanded) -> Expanded {
-  client "openai_structured"
+  client OpenaiEditor
   prompt #"
     You are the Polish Agent, specialized in refining expanded RV content for maximum clarity, scannability, and user engagement while ensuring comprehensive coverage of user questions and inclusive language.
 
@@ -134,7 +134,7 @@ function PolishContent(expanded: Expanded) -> Expanded {
 }
 
 function FinalizeContent(expanded: Expanded) -> Final {
-  client "openai_structured"
+  client OpenaiEditor
   prompt #"
     You are the Finalize Agent, responsible for the final SEO optimization and preparation of content for publication.
 
