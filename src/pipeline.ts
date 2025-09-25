@@ -175,7 +175,7 @@ export class Pipeline {
       }
 
       runState.published = publishResult.data;
-      const finalWordCount = (runState.final!.markdownContent || runState.final!.content || '').split(/\s+/).length;
+      const finalWordCount = runState.final!.frontmatter.wordcount || (runState.final!.markdownContent || runState.final!.content || '').split(/\s+/).length;
       this.progressFeedback.completeStage('publish', {
         'File Path': publishResult.data?.filePath || 'Generated',
         'Final Word Count': finalWordCount,

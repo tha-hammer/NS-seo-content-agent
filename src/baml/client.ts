@@ -64,9 +64,20 @@ export class BAMLClient {
   async expandDraft(draft: Draft): Promise<Expanded> {
     // Pre-compute dynamic values from draft content
     const currentLength = (draft.markdownContent || draft.content || '').length;
-    const targetLength = currentLength * 3;
     const currentWordCount = currentLength ? Math.floor(currentLength / 5) : 0; // ~5 chars per word
-    const targetWordCount = currentWordCount * 3;
+
+    // Use outline target or calculate based on current content
+    const outlineTarget = draft.frontmatter?.wordcountTarget || 1500;
+    const targetWordCount = Math.max(outlineTarget, currentWordCount * 2); // At least 2x growth
+    const targetLength = targetWordCount * 5; // ~5 chars per word
+
+    console.log('DEBUG: Expansion parameters:', {
+      currentWordCount,
+      outlineTarget,
+      targetWordCount,
+      currentLength,
+      targetLength
+    });
 
     // Call BAML function with computed parameters
     return await b.ExpandDraft(draft, currentLength, targetLength, currentWordCount, targetWordCount);

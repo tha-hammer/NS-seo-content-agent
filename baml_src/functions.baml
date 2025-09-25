@@ -1,3 +1,9 @@
+generator my_client {
+ output_type "typescript"
+ output_dir "../"
+ version "0.208.3"
+}
+
 function GenerateOutline(topic: string, cluster: string) -> Outline {
   client OpenaiWriter
   prompt #"
@@ -69,7 +75,7 @@ Write concise, source-cited paragraphs per section based on the provided outline
 
 ### Writing Style:
 - **Concise and focused** - Write clear, direct paragraphs without fluff
-- **Reading Level**: Maintain 8th-10th grade reading level
+- **Reading Level**: Maintain 5th-th grade reading level
 - **Direct answers first** - Start each section with a 40-60 word direct answer to the main question
 - **Citation-heavy** - Include footnote markers [1], [2], etc. for all factual claims
 - **Actionable content** - Provide specific, practical guidance readers can use
@@ -207,6 +213,112 @@ You want it to come off like a friend explaining something to another friend. St
     {{ draft }}
 
     {{ ctx.output_format }}
+  "#
+}
+
+function AddTablesAndExamples(expanded: Expanded, topics: string[]) -> Expanded {
+  client OpenaiEditor
+  prompt #"
+You are the Expand Agent, specialized in enhancing expanded RV content with specific tables and detailed examples.
+
+## Your Task
+Add specific tables and examples to existing expanded content for the provided topics while maintaining all existing content quality and E-E-A-T signals.
+
+## Instructions
+1. **Add relevant comparison tables** for each topic using proper markdown format
+2. **Create specific examples** with real family scenarios and detailed outcomes
+3. **Include step-by-step processes** where applicable
+4. **Maintain existing content quality** and E-E-A-T signals
+5. **Update word count** and reading time in frontmatter
+6. **Add image placeholders** for new visual content needs
+
+## Table Creation Requirements:
+- Use proper markdown table formatting with headers and data rows
+- Include relevant comparison data (features, prices, specifications)
+- Make tables actionable and decision-focused
+- Ensure tables complement existing content sections
+
+## Example Creation Requirements:
+For each topic, provide:
+- At least one well-structured table with relevant data
+- One detailed example or case study with specific details (family names, scenarios, outcomes)
+- Actionable takeaways readers can implement
+- Integration with existing content flow
+
+## Topics to enhance:
+{% for topic in topics %}
+- {{ topic }}
+{% endfor %}
+
+## Current Expanded Content:
+{{ expanded }}
+
+Return the enhanced expanded content with added tables and examples while preserving all existing content, structure, and quality elements.
+
+{{ ctx.output_format }}
+  "#
+}
+
+function ValidateExpandedQuality(expanded: Expanded) -> string {
+  client OpenaiEditor
+  prompt #"
+You are the Quality Validation Agent, responsible for analyzing expanded RV content and providing detailed quality assessment.
+
+## Your Task
+Analyze the provided expanded content and return a comprehensive quality report in JSON format.
+
+## Validation Criteria
+
+### Content Length Requirements:
+- Content should be substantial (minimum 1200 characters)
+- Should demonstrate significant expansion from draft stage
+- Word count should align with frontmatter claims
+
+### Structural Elements:
+- **Tables**: At least 2 comparison/data tables with proper markdown formatting
+- **Checklists**: Minimum 3 actionable checkbox items using "- [ ]" format
+- **Examples**: Real-world scenarios, case studies, or family examples
+- **Headings**: Proper H2/H3 structure for organization
+
+### Image Placeholders:
+- Minimum 2 strategic image placements
+- Each image should have descriptive alt text (minimum 10 characters)
+- Position indicators should be specific and useful
+
+### E-E-A-T Signals:
+- Author bio with relevant RV industry experience
+- Fact-checking status and verification
+- Expert credentials for reviewers
+- High-quality citation mapping
+
+### Evidence Quality:
+- Factual claims mapped to authoritative sources
+- Expert quotes with full credentials
+- Industry data and manufacturer references
+
+## Content to Validate:
+{{ expanded }}
+
+## Required Output Format:
+Return a JSON object with this exact structure:
+{
+  "isValid": boolean,
+  "issues": ["array of critical issues that must be fixed"],
+  "suggestions": ["array of improvement recommendations"],
+  "metrics": {
+    "contentLength": number,
+    "tableCount": number,
+    "checklistItems": number,
+    "imagePlaceholders": number,
+    "h2Count": number,
+    "h3Count": number,
+    "hasExamples": boolean,
+    "hasEatSignals": boolean,
+    "evidenceQuality": "low|medium|high"
+  }
+}
+
+Analyze the content thoroughly and provide actionable feedback for improvement.
   "#
 }
 

@@ -91,6 +91,51 @@ export class BamlAsyncClient {
   }
 
   
+  async AddTablesAndExamples(
+      expanded: types.Expanded,topics: string[],
+      __baml_options__?: BamlCallOptions
+  ): Promise<types.Expanded> {
+    try {
+      const options = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const signal = options.signal;
+      
+      if (signal?.aborted) {
+        throw new BamlAbortError('Operation was aborted', signal.reason);
+      }
+      
+      // Check if onTick is provided - route through streaming if so
+      if (options.onTick) {
+        const stream = this.stream.AddTablesAndExamples(
+          expanded,topics,
+          __baml_options__
+        );
+        
+        return await stream.getFinalResponse();
+      }
+      
+      const collector = options.collector ? (Array.isArray(options.collector) ? options.collector : [options.collector]) : [];
+      const rawEnv = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const env: Record<string, string> = Object.fromEntries(
+        Object.entries(rawEnv).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      const raw = await this.runtime.callFunction(
+        "AddTablesAndExamples",
+        {
+          "expanded": expanded,"topics": topics
+        },
+        this.ctxManager.cloneContext(),
+        options.tb?.__tb(),
+        options.clientRegistry,
+        collector,
+        env,
+        signal,
+      )
+      return raw.parsed(false) as types.Expanded
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   async ExpandDraft(
       draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
@@ -316,6 +361,51 @@ export class BamlAsyncClient {
     }
   }
   
+  async ValidateExpandedQuality(
+      expanded: types.Expanded,
+      __baml_options__?: BamlCallOptions
+  ): Promise<string> {
+    try {
+      const options = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const signal = options.signal;
+      
+      if (signal?.aborted) {
+        throw new BamlAbortError('Operation was aborted', signal.reason);
+      }
+      
+      // Check if onTick is provided - route through streaming if so
+      if (options.onTick) {
+        const stream = this.stream.ValidateExpandedQuality(
+          expanded,
+          __baml_options__
+        );
+        
+        return await stream.getFinalResponse();
+      }
+      
+      const collector = options.collector ? (Array.isArray(options.collector) ? options.collector : [options.collector]) : [];
+      const rawEnv = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const env: Record<string, string> = Object.fromEntries(
+        Object.entries(rawEnv).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      const raw = await this.runtime.callFunction(
+        "ValidateExpandedQuality",
+        {
+          "expanded": expanded
+        },
+        this.ctxManager.cloneContext(),
+        options.tb?.__tb(),
+        options.clientRegistry,
+        collector,
+        env,
+        signal,
+      )
+      return raw.parsed(false) as string
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
 }
 
 class BamlStreamClient {
@@ -329,6 +419,69 @@ class BamlStreamClient {
     this.bamlOptions = bamlOptions || {}
   }
 
+  
+  AddTablesAndExamples(
+      expanded: types.Expanded,topics: string[],
+      __baml_options__?: BamlCallOptions
+  ): BamlStream<partial_types.Expanded, types.Expanded> {
+    try {
+      const options = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const signal = options.signal;
+      
+      if (signal?.aborted) {
+        throw new BamlAbortError('Operation was aborted', signal.reason);
+      }
+      
+      let collector = options.collector ? (Array.isArray(options.collector) ? options.collector : [options.collector]) : [];
+      
+      let onTickWrapper: (() => void) | undefined;
+      
+      // Create collector and wrap onTick if provided
+      if (options.onTick) {
+        const tickCollector = new Collector("on-tick-collector");
+        collector = [...collector, tickCollector];
+        
+        onTickWrapper = () => {
+          const log = tickCollector.last;
+          if (log) {
+            try {
+              options.onTick!("Unknown", log);
+            } catch (error) {
+              console.error("Error in onTick callback for AddTablesAndExamples", error);
+            }
+          }
+        };
+      }
+
+      const rawEnv = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const env: Record<string, string> = Object.fromEntries(
+        Object.entries(rawEnv).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      const raw = this.runtime.streamFunction(
+        "AddTablesAndExamples",
+        {
+          "expanded": expanded,"topics": topics
+        },
+        undefined,
+        this.ctxManager.cloneContext(),
+        options.tb?.__tb(),
+        options.clientRegistry,
+        collector,
+        env,
+        signal,
+        onTickWrapper,
+      )
+      return new BamlStream<partial_types.Expanded, types.Expanded>(
+        raw,
+        (a): partial_types.Expanded => a,
+        (a): types.Expanded => a,
+        this.ctxManager.cloneContext(),
+        options.signal,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
   
   ExpandDraft(
       draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
@@ -637,6 +790,69 @@ class BamlStreamClient {
         raw,
         (a): partial_types.Expanded => a,
         (a): types.Expanded => a,
+        this.ctxManager.cloneContext(),
+        options.signal,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  ValidateExpandedQuality(
+      expanded: types.Expanded,
+      __baml_options__?: BamlCallOptions
+  ): BamlStream<string, string> {
+    try {
+      const options = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const signal = options.signal;
+      
+      if (signal?.aborted) {
+        throw new BamlAbortError('Operation was aborted', signal.reason);
+      }
+      
+      let collector = options.collector ? (Array.isArray(options.collector) ? options.collector : [options.collector]) : [];
+      
+      let onTickWrapper: (() => void) | undefined;
+      
+      // Create collector and wrap onTick if provided
+      if (options.onTick) {
+        const tickCollector = new Collector("on-tick-collector");
+        collector = [...collector, tickCollector];
+        
+        onTickWrapper = () => {
+          const log = tickCollector.last;
+          if (log) {
+            try {
+              options.onTick!("Unknown", log);
+            } catch (error) {
+              console.error("Error in onTick callback for ValidateExpandedQuality", error);
+            }
+          }
+        };
+      }
+
+      const rawEnv = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const env: Record<string, string> = Object.fromEntries(
+        Object.entries(rawEnv).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      const raw = this.runtime.streamFunction(
+        "ValidateExpandedQuality",
+        {
+          "expanded": expanded
+        },
+        undefined,
+        this.ctxManager.cloneContext(),
+        options.tb?.__tb(),
+        options.clientRegistry,
+        collector,
+        env,
+        signal,
+        onTickWrapper,
+      )
+      return new BamlStream<string, string>(
+        raw,
+        (a): string => a,
+        (a): string => a,
         this.ctxManager.cloneContext(),
         options.signal,
       )

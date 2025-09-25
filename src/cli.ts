@@ -80,8 +80,8 @@ export class CLI {
         if (result.runState.final) {
           console.log(chalk.bold('Content Details:'));
           console.log(`   Title: ${chalk.white(result.runState.final.frontmatter.title)}`);
-          console.log(`   Word Count: ${chalk.cyan(result.runState.final.qualityMetrics.wordCount)}`);
-          console.log(`   Reading Time: ${chalk.cyan(result.runState.final.frontmatter.reading_time)} minutes`);
+          console.log(`   Word Count: ${chalk.cyan(result.runState.final.frontmatter.wordcount)}`);
+          console.log(`   Reading Time: ${chalk.cyan(result.runState.final.frontmatter.readingTime)} minutes`);
           console.log(`   SEO Score: ${chalk.green('✅ Optimized')}`);
         }
       } else {

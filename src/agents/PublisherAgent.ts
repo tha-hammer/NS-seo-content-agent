@@ -1,5 +1,6 @@
 import { Agent, run } from '@openai/agents';
-import { PublishedSchema, type Final, type Published, type Frontmatter } from '@/schemas';
+import { PublishedSchema, type Published } from '@/schemas';
+import { type Final, type Frontmatter } from '../../baml_client';
 import { getConfig } from '@/config';
 import fs from 'fs/promises';
 import path from 'path';
@@ -177,11 +178,11 @@ export class PublisherAgent {
     if (frontmatter.toc !== undefined) {
       yaml.push(`toc: ${frontmatter.toc}`);
     }
-    if (frontmatter.reading_time !== undefined) {
-      yaml.push(`reading_time: ${frontmatter.reading_time}`);
+    if (frontmatter.readingTime !== undefined) {
+      yaml.push(`reading_time: ${frontmatter.readingTime}`);
     }
-    if (frontmatter.word_count !== undefined) {
-      yaml.push(`word_count: ${frontmatter.word_count}`);
+    if (frontmatter.wordcount !== undefined) {
+      yaml.push(`word_count: ${frontmatter.wordcount}`);
     }
     
     if (frontmatter.schema && frontmatter.schema.length > 0) {
