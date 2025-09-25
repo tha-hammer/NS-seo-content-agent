@@ -1,11 +1,26 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
+import OpenAI from 'openai';
 import type { Outline, Draft, Expanded, Final } from '../schemas';
 import { b } from '../../baml_client';
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
+
+// Lazy initialization of OpenAI client to ensure env vars are loaded
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is required for web search functionality');
+    }
+    openaiClient = new OpenAI({ apiKey });
+  }
+  return openaiClient;
+}
 
 export class BAMLClient {
   private static instance: BAMLClient;
@@ -17,9 +32,44 @@ export class BAMLClient {
     return BAMLClient.instance;
   }
 
-  async generateOutline(topic: string, cluster: string): Promise<Outline> {
-    // Call BAML function directly for outline generation (no dynamic parameters needed)
-    return await b.GenerateOutline(topic, cluster);
+  /**
+   * Perform web research on a topic using OpenAI web search
+   */
+  private async researchTopic(topic: string): Promise<string> {
+    try {
+      console.log(`DEBUG: BAML - Starting web research for topic: ${topic}`);
+
+      const response = await getOpenAIClient().chat.completions.create({
+        model: "gpt-4o-search-preview",
+        web_search_options: {},
+        messages: [
+          {
+            role: "user",
+            content: `Research comprehensive information about "${topic}" related to RVs, recreational vehicles, camping, and outdoor lifestyle. Focus on factual, educational content that would be useful for creating an authoritative guide. Include technical details, history, best practices, common issues, and expert recommendations.`
+          }
+        ]
+      });
+
+      const researchContent = response.choices[0]?.message?.content || '';
+      console.log(`DEBUG: BAML - Knowledge research completed, content length: ${researchContent.length}`);
+      return researchContent;
+
+    } catch (error) {
+      console.warn(`WARNING: BAML - Web research failed for topic "${topic}":`, error);
+      return `Research unavailable for topic: ${topic}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+  }
+
+  async generateOutline(topic: string, cluster: string = ''): Promise<Outline> {
+    // Perform web research before generating outline
+    console.log(`DEBUG: BAML - Performing research for topic: ${topic}`);
+    const researchData = await this.researchTopic(topic);
+
+    // Use research data as cluster context, fallback to provided cluster if research fails
+    const clusterContext = researchData.length > 50 ? researchData : cluster || 'No additional context available';
+
+    // Call BAML function with research-enhanced cluster data
+    return await b.GenerateOutline(topic, clusterContext);
   }
 
   async generateDraft(outline: Outline): Promise<Draft> {

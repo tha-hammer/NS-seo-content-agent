@@ -80,8 +80,10 @@ export class CLI {
         if (result.runState.final) {
           console.log(chalk.bold('Content Details:'));
           console.log(`   Title: ${chalk.white(result.runState.final.frontmatter.title)}`);
-          console.log(`   Word Count: ${chalk.cyan(result.runState.final.frontmatter.wordcount)}`);
-          console.log(`   Reading Time: ${chalk.cyan(result.runState.final.frontmatter.readingTime)} minutes`);
+          const actualWordCount = (result.runState.final.markdownContent || result.runState.final.content || '').split(/\s+/).length;
+          const actualReadingTime = Math.ceil(actualWordCount / 200);
+          console.log(`   Word Count: ${chalk.cyan(actualWordCount)}`);
+          console.log(`   Reading Time: ${chalk.cyan(actualReadingTime)} minutes`);
           console.log(`   SEO Score: ${chalk.green('✅ Optimized')}`);
         }
       } else {

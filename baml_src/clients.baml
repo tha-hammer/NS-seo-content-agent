@@ -4,7 +4,7 @@ client<llm> OpenaiWriter {
     model gpt-4o-mini
     api_key env.OPENAI_API_KEY
     temperature 0.3
-    max_tokens 4096
+    max_tokens 16384
   }
 }
 
@@ -14,6 +14,6 @@ client<llm> OpenaiEditor {
     model gpt-4o
     api_key env.OPENAI_API_KEY
     temperature 0.1
-    max_tokens 4096
+    max_tokens 16384
   }
 }

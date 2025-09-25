@@ -127,7 +127,7 @@ Return the complete finalized content with all optimizations applied.`;
   }
 
   static optimizeTitle(originalTitle: string, funnelStage: FunnelStage): string {
-    const currentYear = 2024; // Fixed to 2024 for tests
+    const currentYear = 2025; // Fixed to 2024 for tests
     let powerWords: string[] = [];
     
     switch (funnelStage) {

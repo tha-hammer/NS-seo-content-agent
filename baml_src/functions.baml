@@ -187,15 +187,22 @@ Position indicators:
 - Reference industry data, manufacturer specs, and professional insights
 - Ensure YMYL content has high-authority backing
 
-## Content Structure:
-1. **Triple the content length** - Expand from {{ currentLength }} characters to ~{{ targetLength }} characters
-2. **Expand word count** - Grow from {{ currentWordCount }} words to ~{{ targetWordCount }} words
-3. Add 3-4 comparison/data tables using proper markdown table format
-4. Include 2-3 real-world examples or case studies with specific family scenarios
-5. Insert 3-4 actionable checklists using markdown checkbox format
-6. Place 3-5 strategic image placeholders with descriptive alt text
-7. Map all claims to sources in the evidence object
-8. Add comprehensive E-E-A-T signals (author bio, reviewer, fact-check status)
+## CRITICAL EXPANSION REQUIREMENTS:
+
+🚨 **MANDATORY WORD COUNT EXPANSION** 🚨
+- CURRENT CONTENT: {{ currentWordCount }} words
+- **REQUIRED TARGET: {{ targetWordCount }} words**
+- **YOU MUST REACH AT LEAST {{ targetWordCount }} WORDS - NO EXCEPTIONS**
+
+## Content Structure - ALL REQUIREMENTS MANDATORY:
+1. **🎯 PRIMARY GOAL: Expand from {{ currentWordCount }} words to {{ targetWordCount }} words**
+2. **📝 Character expansion**: Grow from {{ currentLength }} characters to ~{{ targetLength }} characters
+3. **📊 Add 3-4 comparison/data tables** using proper markdown table format with detailed data
+4. **👨‍👩‍👧‍👦 Include 2-3 detailed real-world examples** with specific family scenarios, names, and outcomes
+5. **✅ Insert 3-4 comprehensive actionable checklists** using markdown checkbox format
+6. **🖼️ Place 3-5 strategic image placeholders** with descriptive alt text and positioning
+7. **📚 Map all claims to authoritative sources** in the evidence object
+8. **🏆 Add comprehensive E-E-A-T signals** (author bio, reviewer, fact-check status, credentials)
 
 ## Output Requirements:
 Return STRICT JSON matching the ExpandedSchema:
@@ -206,8 +213,16 @@ Return STRICT JSON matching the ExpandedSchema:
 - eatSignals: Author bio, reviewer info, fact-check status, review date
 
 Focus on creating content that establishes clear expertise and provides exceptional value to RV enthusiasts while maintaining strong search optimization.
-You want it to come off like a friend explaining something to another friend. Still from a "we're the experts" type of vibe that still feels friendly. You want to build more trust and make the article flow in a way that isn't just dealing with pure fact. 
+You want it to come off like a friend explaining something to another friend. Still from a "we're the experts" type of vibe that still feels friendly. You want to build more trust and make the article flow in a way that isn't just dealing with pure fact.
 
+🔥 **EXPANSION VALIDATION CHECKLIST** 🔥
+Before submitting your response, verify:
+- ✅ Content has grown from {{ currentWordCount }} words to AT LEAST {{ targetWordCount }} words
+- ✅ Added substantial new sections with detailed explanations
+- ✅ Included multiple tables with comprehensive data
+- ✅ Added detailed examples with specific names and scenarios
+- ✅ Created actionable checklists that readers can use immediately
+- ✅ Content is significantly longer and more comprehensive than the input
 
     Expand this draft:
     {{ draft }}

@@ -1,4 +1,5 @@
 import { Agent, run } from '@openai/agents';
+import OpenAI from 'openai';
 import { getConfig } from '../config.js';
 import { OutlineSchema, type Outline } from '../schemas.js';
 import { extractAgentOutput, parseJsonResponse } from '../utils/agentResponse.js';
@@ -65,14 +66,63 @@ export class OutlineAgent {
     // Note: output schema temporarily removed due to SDK compatibility
   });
 
+  // Lazy initialization of OpenAI client to ensure env vars are loaded
+  private static openaiClient: OpenAI | null = null;
+
+  private static getOpenAIClient(): OpenAI {
+    if (!this.openaiClient) {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new Error('OPENAI_API_KEY environment variable is required for web search functionality');
+      }
+      this.openaiClient = new OpenAI({ apiKey });
+    }
+    return this.openaiClient;
+  }
+
+  /**
+   * Perform web research on a topic using OpenAI web search
+   */
+  private static async researchTopic(topic: string): Promise<string> {
+    try {
+      console.log(`DEBUG: Starting web research for topic: ${topic}`);
+
+      const response = await this.getOpenAIClient().chat.completions.create({
+        model: "gpt-4o-search-preview",
+        web_search_options: {},
+        messages: [
+          {
+            role: "user",
+            content: `Research comprehensive information about "${topic}" related to RVs, recreational vehicles, camping, and outdoor lifestyle. Focus on factual, educational content that would be useful for creating an authoritative guide. Include technical details, history, best practices, common issues, and expert recommendations.`
+          }
+        ]
+      });
+
+      const researchContent = response.choices[0]?.message?.content || '';
+      console.log(`DEBUG: Knowledge research completed, content length: ${researchContent.length}`);
+      return researchContent;
+
+    } catch (error) {
+      console.warn(`WARNING: Web research failed for topic "${topic}":`, error);
+      return `Research unavailable for topic: ${topic}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+  }
+
   /**
    * Generate an outline from a topic and cluster
    */
-  static async generateOutline(topic: string, cluster: string): Promise<OutlineResult> {
+  static async generateOutline(topic: string, cluster: string = ''): Promise<OutlineResult> {
     try {
+      // Perform web research before generating outline
+      console.log(`DEBUG: Performing research for topic: ${topic}`);
+      const researchData = await this.researchTopic(topic);
+
+      // Use research data as cluster context, fallback to provided cluster if research fails
+      const clusterContext = researchData.length > 50 ? researchData : cluster || 'No additional context available';
+
       const prompt = `Create an outline for: "${topic}"
 
-Cluster context: ${cluster}
+Research-based cluster context: ${clusterContext}
 Target audience: RV enthusiasts and potential buyers
 
 Consider:
@@ -81,7 +131,7 @@ Consider:
 3. What search intent does this topic satisfy?
 4. How does this fit into the broader RV content ecosystem?
 
-Return a comprehensive outline that provides genuine value while optimizing for search discoverability.`;
+Use the research data to ensure accuracy and comprehensiveness. Return a comprehensive outline that provides genuine value while optimizing for search discoverability.`;
 
       console.log('DEBUG: About to call LLM for outline generation...');
       const result = await run(this.agent, prompt);
