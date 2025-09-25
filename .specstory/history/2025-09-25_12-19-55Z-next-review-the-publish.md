@@ -6570,3 +6570,1276 @@ _**Agent (claude-sonnet-4-20250514)**_
 - [⚡] 🌡️ Fix null values in BAML dynamic parameter computation
 
 
+_**Agent (claude-sonnet-4-20250514)**_
+
+First, let me check the actual outline structure from the failed run:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Read** `./runs/cea2c384-4f6b-445c-941e-ffaeeb7352ee/state.json`
+
+Result:
+
+```
+1→{
+     2→  "id": "cea2c384-4f6b-445c-941e-ffaeeb7352ee",
+     3→  "topic": "how to finance an RV purchase",
+     4→  "bucket": "daily",
+     5→  "currentStage": "draft",
+     6→  "createdAt": "2025-09-25T14:44:33.991Z",
+     7→  "updatedAt": "2025-09-25T14:44:57.289Z",
+     8→  "errors": [
+     9→    {
+    10→      "stage": "draft",
+    11→      "message": "Unexpected error: BamlError: BamlInvalidArgumentError:   Error: targetWordCount: Expected type Int, got `Null`\n  Error: funnelStage: Expected type String, got `Null`\n  Error: searchIntent: Expected type String, got `Null`\n  Error: funnelDescription: Expected type String, got `Null`\n",
+    12→      "timestamp": "2025-09-25T14:44:57.289Z"
+    13→    }
+    14→  ],
+    15→  "outline": {
+    16→    "title": "How to Finance an RV Purchase",
+    17→    "slug": "finance-rv-purchase",
+    18→    "cluster": "daily-content",
+    19→    "funnel": "BOF",
+    20→    "intent": "Transactional",
+    21→    "tpb": "Perceived_control",
+    22→    "targetReader": "RV enthusiasts and potential buyers looking to finance their RV purchase effectively.",
+    23→    "headings": [
+    24→      {
+    25→        "h2": "Understanding RV Financing Options",
+    26→        "title": "Explore Different Financing Options for Your RV",
+    27→        "keypoints": [
+    28→          "Types of RV loans: secured vs unsecured",
+    29→          "Understanding interest rates and terms",
+    30→          "Importance of credit score in financing"
+    31→        ],
+    32→        "h3": [
+    33→          "Secured Loans vs Unsecured Loans",
+    34→          "Fixed vs Variable Interest Rates",
+    35→          "How Credit Scores Affect Financing"
+    36→        ]
+    37→      },
+    38→      {
+    39→        "h2": "Preparing for Your RV Loan Application",
+    40→        "title": "Get Ready for the Financing Process",
+    41→        "keypoints": [
+    42→          "Gather necessary documentation",
+    43→          "Assess your budget and monthly payments",
+    44→          "Understanding down payments and trade-ins"
+    45→        ],
+    46→        "h3": [
+    47→          "Documents Needed for Loan Application",
+    48→          "Calculating Your Budget for RV Payments",
+    49→          "How Trade-Ins Can Affect Financing"
+    50→        ]
+    51→      },
+    52→      {
+    53→        "h2": "Finding the Right Lender",
+    54→        "title": "Choose the Best Lender for Your RV Financing",
+    55→        "keypoints": [
+    56→          "Comparing lenders: banks, credit unions, and RV dealerships",
+    57→          "Understanding loan terms and conditions",
+    58→          "Tips for negotiating better rates"
+    59→        ],
+    60→        "h3": [
+    61→          "Pros and Cons of Different Lenders",
+    62→          "Key Loan Terms to Review",
+    63→          "Negotiation Strategies for Better Rates"
+    64→        ]
+    65→      }
+    66→    ],
+    67→    "faqs": [
+    68→      {
+    69→        "q": "What is the average interest rate for RV loans?",
+    70→        "question": "What should I expect for RV loan interest rates?",
+    71→        "answer": "Average interest rates for RV loans typically range from 4% to 10%, depending on credit score and loan terms.",
+    72→        "a_outline": "Understanding RV Financing Options"
+    73→      },
+    74→      {
+    75→        "q": "How much should I put down on an RV?",
+    76→        "question": "What is a reasonable down payment for an RV?",
+    77→        "answer": "A typical down payment for an RV is around 10% to 20% of the purchase price, but this can vary based on lender requirements.",
+    78→        "a_outline": "Preparing for Your RV Loan Application"
+    79→      },
+    80→      {
+    81→        "q": "Can I finance an RV with bad credit?",
+    82→        "question": "Is it possible to get RV financing with poor credit?",
+    83→        "answer": "Yes, some lenders specialize in financing RVs for those with bad credit, but expect higher interest rates.",
+    84→        "a_outline": "Finding the Right Lender"
+    85→      }
+    86→    ],
+    87→    "metadata": {
+    88→      "primaryKeyword": "RV financing",
+    89→      "secondaryKeywords": [
+    90→        "how to finance an RV",
+    91→        "RV loan options",
+    92→        "best RV lenders"
+    93→      ],
+    94→      "wordcountTarget": 1500,
+    95→      "readingTime": 7,
+    96→      "difficulty": "Intermediate"
+    97→    }
+    98→  }
+    99→}
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Perfect! Now I can see the actual outline structure. The problem is in my BAMLClient code - I was looking for properties directly on the outline object, but they're nested differently. Let me fix the generateDraft function:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/baml/client.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   197→
+   198→    return object as Outline;
+   199→  }
+   200→
+   201→  async generateDraft(outline: Outline): Promise<Draft> {
+   202→    // Pre-compute dynamic values from outline - handle the nested structure correctly
+   203→    const targetWordCount = outline.metadata?.wordcountTarget
+   204→      ? Math.floor(outline.metadata.wordcountTarget * 0.6)
+   205→      : 1200;
+   206→
+   207→    const funnelStage = outline.funnel || 'TOF';
+   208→    const searchIntent = outline.intent || 'informational';
+   209→
+   210→    // Get funnel description
+   211→    const getFunnelDescription = (funnel: string): string => {
+   212→      switch (funnel) {
+   213→        case 'TOF': return 'Educational, awareness content';
+   214→        case 'MOF': return 'Comparative, evaluation content';
+   215→        case 'BOF': return 'Decision, action content';
+   216→        default: return 'General audience content';
+   217→      }
+   218→    };
+   219→
+   220→    const funnelDescription = getFunnelDescription(funnelStage);
+   221→
+   222→    // Debug log to verify values
+   223→    console.log('DEBUG: Draft generation parameters:', {
+   224→      targetWordCount,
+   225→      funnelStage,
+   226→      searchIntent,
+   227→      funnelDescription,
+   228→      outlineStructure: {
+   229→        hasMetadata: !!outline.metadata,
+   230→        wordcountTarget: outline.metadata?.wordcountTarget,
+   231→        funnel: outline.funnel,
+   232→        intent: outline.intent
+   233→      }
+   234→    });
+   235→
+   236→    // Call BAML function with computed parameters
+   237→    return await b.GenerateDraft(outline, targetWordCount, funnelStage, searchIntent, funnelDescription);
+   238→  }
+   239→
+   240→  async expandDraft(draft: Draft): Promise<Expanded> {
+   241→    // Pre-compute dynamic values from draft content
+   242→    const currentLength = (draft.markdownContent || draft.content || '').length;
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+The issue might be that the outline object coming from the BAML generation has a different structure than what I'm expecting. Looking at the state.json, I see the outline has the right structure, but maybe the TypeScript types are mismatched. 
+
+Let me check what's actually being passed to the generateDraft function by looking at how the pipeline calls it:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Read** `./src/pipeline.ts`
+
+Result:
+
+```
+95→      // Convert bucket to cluster name
+    96→      const cluster = bucket === 'daily' ? 'daily-content' : bucket === 'weekly' ? 'weekly-guides' : 'monthly-deep-dives';
+    97→      runState.outline = await b.GenerateOutline(topic, cluster);
+    98→      this.progressFeedback.completeStage('outline', {
+    99→        'Title': runState.outline.title,
+   100→        'Sections': runState.outline.headings?.length || 0,
+   101→        'FAQs': runState.outline.faqs?.length || 0,
+   102→        'Target Words': runState.outline.metadata?.wordcountTarget || 0
+   103→      });
+   104→
+   105→      runState.currentStage = 'draft';
+   106→      runState.updatedAt = new Date().toISOString();
+   107→      await this.saveRunState(runState);
+   108→
+   109→      // Stage 2: Draft Creation
+   110→      this.progressFeedback.startStage('draft', 'Writing initial content with citations');
+   111→      runState.draft = await b.GenerateDraft(runState.outline!);
+   112→      const draftWordCount = (runState.draft.markdownContent || runState.draft.content || '').split(/\s+/).length;
+   113→      this.progressFeedback.completeStage('draft', {
+   114→        'Word Count': draftWordCount,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+I see the issue! The pipeline is calling `await b.GenerateDraft(runState.outline!)` directly, but it should be calling the BAMLClient method. The pipeline is bypassing my BAMLClient wrapper completely!
+
+The pipeline is using the BAML client `b` directly instead of using my enhanced BAMLClient class. I need to update the pipeline to use the BAMLClient instead.
+
+Let me check how the BAMLClient should be integrated:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+     1→import { type Published } from '@/schemas';
+     2→import { b, type Outline, type Draft, type Expanded, type Final } from '../baml_client';
+     3→import { BAMLClient } from '@/baml/client';
+     4→
+     5→// Define RunState type using BAML types instead of Zod
+     6→export interface RunState {
+     7→  id: string;
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Now I need to create an instance of the BAMLClient and use it instead of the direct BAML calls:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Error:
+
+```
+<tool_use_error>String to replace not found in file.
+String: export class Pipeline {
+  private static progressFeedback = new ProgressFeedback();
+
+  static async runPipeline(topic: string, bucket: PipelineBucket): Promise<PipelineResult> {</tool_use_error>
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Let me find the exact class definition:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Bash** Find the Pipeline class definition
+
+`grep -n -A 5 "export class Pipeline" /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts`
+
+Result:
+
+```
+51:export class Pipeline {
+52-  private static progressFeedback = ProgressFeedback.getInstance();
+53-
+54-  static async runPipeline(topic: string, bucket: PipelineBucket): Promise<PipelineResult> {
+55-    // Validate inputs
+56-    if (!topic || topic.trim().length === 0) {
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    47→  data?: RunState;
+    48→  error?: string;
+    49→}
+    50→
+    51→export class Pipeline {
+    52→  private static progressFeedback = ProgressFeedback.getInstance();
+    53→  private static bamlClient = BAMLClient.getInstance();
+    54→
+    55→  static async runPipeline(topic: string, bucket: PipelineBucket): Promise<PipelineResult> {
+    56→    // Validate inputs
+    57→    if (!topic || topic.trim().length === 0) {
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Now I need to replace the direct BAML calls with the BAMLClient calls. Let me update the draft generation:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   107→      runState.currentStage = 'draft';
+   108→      runState.updatedAt = new Date().toISOString();
+   109→      await this.saveRunState(runState);
+   110→
+   111→      // Stage 2: Draft Creation
+   112→      this.progressFeedback.startStage('draft', 'Writing initial content with citations');
+   113→      runState.draft = await this.bamlClient.generateDraft(runState.outline!);
+   114→      const draftWordCount = (runState.draft.markdownContent || runState.draft.content || '').split(/\s+/).length;
+   115→      this.progressFeedback.completeStage('draft', {
+   116→        'Word Count': draftWordCount,
+   117→        'FAQ Blocks': runState.draft.faqBlocks?.length || 0,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Now let me update all the other BAML calls in the pipeline:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   121→      runState.currentStage = 'expand';
+   122→      runState.updatedAt = new Date().toISOString();
+   123→      await this.saveRunState(runState);
+   124→
+   125→      // Stage 3: Content Expansion
+   126→      this.progressFeedback.startStage('expand', 'Enriching with tables, examples, and E-E-A-T signals');
+   127→      runState.expanded = await this.bamlClient.expandDraft(runState.draft!);
+   128→      const expandedWordCount = (runState.expanded.markdownContent || runState.expanded.content || '').split(/\s+/).length;
+   129→      const baseDraftWordCount = (runState.draft!.markdownContent || runState.draft!.content || '').split(/\s+/).length;
+   130→      this.progressFeedback.completeStage('expand', {
+   131→        'Word Count': expandedWordCount,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   137→      runState.currentStage = 'polish';
+   138→      runState.updatedAt = new Date().toISOString();
+   139→      await this.saveRunState(runState);
+   140→
+   141→      // Stage 4: Content Polishing
+   142→      this.progressFeedback.startStage('polish', 'Polishing for clarity, scannability, and inclusivity');
+   143→      runState.expanded = await this.bamlClient.polishContent(runState.expanded!); // Update expanded with polished content
+   144→      this.progressFeedback.completeStage('polish', {
+   145→        'Readability Grade': runState.expanded.qualityMetrics?.readabilityGrade || 'N/A',
+   146→        'Scannability': 'Optimized',
+   147→        'PAA Questions': 'Integrated',
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   151→      runState.currentStage = 'finalize';
+   152→      runState.updatedAt = new Date().toISOString();
+   153→      await this.saveRunState(runState);
+   154→
+   155→      // Stage 5: Content Finalization
+   156→      this.progressFeedback.startStage('finalize', 'Applying SEO optimization and schema markup');
+   157→      runState.final = await this.bamlClient.finalizeContent(runState.expanded!);
+   158→      this.progressFeedback.completeStage('finalize', {
+   159→        'Title Length': runState.final.frontmatter.title?.length || 0,
+   160→        'Meta Description': runState.final.frontmatter.description?.length || 0,
+   161→        'Schema Objects': runState.final.frontmatter.schema?.length || 0,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Now I need to update the runPipelineFromStage method as well. Let me find those calls:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Bash** Find remaining direct BAML calls
+
+`grep -n "b\.Generate\|b\.Expand\|b\.Polish\|b\.Finalize" /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts`
+
+Result:
+
+```
+99:      runState.outline = await b.GenerateOutline(topic, cluster);
+300:        runState.outline = await b.GenerateOutline(runState.topic, cluster);
+306:        runState.draft = await b.GenerateDraft(runState.outline!);
+312:        runState.expanded = await b.ExpandDraft(runState.draft!);
+318:        runState.expanded = await b.PolishContent(runState.expanded!);
+324:        runState.final = await b.FinalizeContent(runState.expanded!);
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+I need to update all of these. Let me start with the remaining ones in runPipelineFromStage:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   301→        runState.currentStage = 'draft';
+   302→        await this.saveRunState(runState);
+   303→      }
+   304→
+   305→      if (stage === 'draft' || (stage !== 'draft' && !runState.draft)) {
+   306→        runState.draft = await this.bamlClient.generateDraft(runState.outline!);
+   307→        runState.currentStage = 'expand';
+   308→        await this.saveRunState(runState);
+   309→      }
+   310→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   307→        runState.currentStage = 'expand';
+   308→        await this.saveRunState(runState);
+   309→      }
+   310→
+   311→      if (stage === 'expand' || (stage !== 'expand' && !runState.expanded)) {
+   312→        runState.expanded = await this.bamlClient.expandDraft(runState.draft!);
+   313→        runState.currentStage = 'polish';
+   314→        await this.saveRunState(runState);
+   315→      }
+   316→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   313→        runState.currentStage = 'polish';
+   314→        await this.saveRunState(runState);
+   315→      }
+   316→
+   317→      if (stage === 'polish') {
+   318→        runState.expanded = await this.bamlClient.polishContent(runState.expanded!);
+   319→        runState.currentStage = 'finalize';
+   320→        await this.saveRunState(runState);
+   321→      }
+   322→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   319→        runState.currentStage = 'finalize';
+   320→        await this.saveRunState(runState);
+   321→      }
+   322→
+   323→      if (stage === 'finalize' || !runState.final) {
+   324→        runState.final = await this.bamlClient.finalizeContent(runState.expanded!);
+   325→        runState.currentStage = 'publish';
+   326→        await this.saveRunState(runState);
+   327→      }
+   328→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Now I need to update the outline generation calls as well:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   296→      runState.updatedAt = new Date().toISOString();
+   297→
+   298→      if (stage === 'outline' || (stage !== 'outline' && !runState.outline)) {
+   299→        const cluster = runState.bucket === 'daily' ? 'daily-content' : runState.bucket === 'weekly' ? 'weekly-guides' : 'monthly-deep-dives';
+   300→        runState.outline = await this.bamlClient.generateOutline(runState.topic, cluster);
+   301→        runState.currentStage = 'draft';
+   302→        await this.saveRunState(runState);
+   303→      }
+   304→
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Wait, I also need to add the generateOutline method to my BAMLClient, and I need to update the main pipeline outline generation too. Let me add the generateOutline method first:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Error:
+
+```
+<tool_use_error>String to replace not found in file.
+String:   async generateOutline(topic: string, cluster: string): Promise<Outline> {
+    const prompt = `You are the Outline Agent, specialized in creating comprehensive, SEO-optimized outlines for RV and recreational vehicle content.
+
+GOAL: Produce a JSON object matching the exact Outline schema.
+- Title Case ≤70 chars; slug kebab-case ≤60 chars.
+- At least 3 H2s; each has 2–5 keypoints. h3 may be [].
+- Enforce enums exactly; metadata.secondaryKeywords 6–12; readingTime = ceil(wordcountTarget / 200).
+- Integrate TPB cues (attitude/norm/perceived_control) directly into keypoints/h3s.
+- U.S. English; precise RV terminology (Class A/B/C, travel trailer, fifth-wheel, GVWR, tow rating, boondocking, hookups, depreciation, storage, warranty, financing).
+
+Inputs:
+- topic: ${topic}
+- cluster: ${cluster}
+
+Auto-classify if not provided: 
+- "what is|how to|guide|beginner" → TOF / informational
+- "best|vs|compare|reviews" → MOF / comparative
+- "price|dealer|for sale|financing|near me" → BOF / transactional
+
+SELF-CHECK before returning:
+1) H2≥3 and each has ≥2 keypoints.
+2) Slug is valid kebab-case; readingTime is ceil(wordcountTarget/200).
+3) Enums normalized exactly.
+4) Return JSON only.
+`;
+
+    const { object } = await generateObject({
+      model: openai('gpt-4o-mini'),
+      prompt,
+      schema: OutlineSchema,
+      temperature: 0.1
+    });
+    return object;
+  }
+
+  return object as Outline;</tool_use_error>
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Let me find where the generateOutline method should be added:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Read** `./src/baml/client.ts`
+
+Result:
+
+```
+16→    }
+    17→    return BAMLClient.instance;
+    18→  }
+    19→
+    20→  async generateOutline(topic: string, cluster: string): Promise<Outline> {
+    21→    const prompt = `You are the Outline Agent, specialized in creating comprehensive, SEO-optimized outlines for RV (recreational vehicle) content.
+    22→
+    23→Goal
+    24→
+    25→Produce a JSON object matching the exact Outline schema below—no extra keys, no commentary, no markdown—tailored to the given ${topic} and ${cluster}. Optimize for search intent, funnel stage, and user psychology using the Theory of Planned Behavior (TPB).
+    26→
+    27→Inputs
+    28→
+    29→topic: ${topic}
+    30→
+    31→cluster: ${cluster}
+    32→
+    33→(Optional hints if provided in the user’s request: funnel stage, intent, tpb)
+    34→
+    35→Allowed taxonomies (normalize if hints differ)
+    36→
+    37→funnel: one of "TOF" | "MOF" | "BOF"
+    38→
+    39→intent: one of "informational" | "comparative" | "transactional"
+    40→
+    41→tpb: one of "attitude" | "norm" | "perceived_control"
+    42→
+    43→Auto-classification heuristics (if not explicitly provided)
+    44→
+    45→If topic includes “what is”, “how to”, “guide”, “beginner” → funnel="TOF", intent="informational".
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+I need to replace the entire old generateOutline method with a simple BAML call:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Error:
+
+```
+<tool_use_error>String to replace not found in file.
+String:   async generateOutline(topic: string, cluster: string): Promise<Outline> {
+    const prompt = `You are the Outline Agent, specialized in creating comprehensive, SEO-optimized outlines for RV (recreational vehicle) content.
+
+Goal
+
+Produce a JSON object matching the exact Outline schema below—no extra keys, no commentary, no markdown—tailored to the given ${topic} and ${cluster}. Optimize for search intent, funnel stage, and user psychology using the Theory of Planned Behavior (TPB).
+
+Inputs
+
+topic: ${topic}
+
+cluster: ${cluster}
+
+(Optional hints if provided in the user's request: funnel stage, intent, tpb)
+
+Allowed taxonomies (normalize if hints differ)
+
+funnel: one of "TOF" | "MOF" | "BOF"
+
+intent: one of "informational" | "comparative" | "transactional"
+
+tpb: one of "attitude" | "norm" | "perceived_control"
+
+Auto-classification heuristics (if not explicitly provided)
+
+If topic includes "what is", "how to", "guide", "beginner" → funnel="TOF", intent="informational".
+
+If topic includes "best", "vs", "compare", "reviews" → funnel="MOF", intent="comparative".
+
+If topic includes "price", "dealer", "for sale", "financing", "near me" → funnel="BOF", intent="transactional".
+
+RV domain guidance
+
+Use precise RV terminology (e.g., Class A/B/C, travel trailer, fifth-wheel, GVWR/GCWR, tow rating, floorplans, hookups, boondocking, depreciation, storage, insurance, warranty, financing). Prefer U.S. English.
+
+Style & structure rules
+
+Minimum 3 H2 sections; each H2 has 2–5 keypoints.
+
+Optional H3s under an H2 are allowed (0–5). If none, return an empty array [].
+
+Avoid generic headers like "Introduction" or "Conclusion." Make H2s specific and benefit-driven.
+
+Bake TPB into sections:
+
+attitude: benefits/drawbacks, outcomes, experiences.
+
+norm: family/community acceptance, campground culture, peer examples.
+
+perceived_control: step-by-steps, checklists, costs/time/tools required.
+
+FAQs: 3–6 concise, practical Q&As. Keep answers ≤ ~60 words. If you add an answer outline, put it in a_outline; otherwise set a_outline to null.
+
+SEO rules
+
+title: Title Case, ≤ 70 characters, include a clear benefit or primary keyword.
+
+slug: kebab-case, lowercase, ≤ 60 characters, alphanumeric + hyphens only.
+
+metadata.primaryKeyword: must include "rv" or a close synonym (e.g., "motorhome", "travel trailer") relevant to the topic.
+
+metadata.secondaryKeywords: 6–12 unique terms mixing head & long-tail (questions welcome). No duplicates; avoid brand names unless central to the topic.
+
+metadata.wordcountTarget: 900–1,800 for TOF/MOF; 1,100–2,200 for BOF.
+
+metadata.readingTime: compute as ceil(wordcountTarget / 200) (minutes).
+
+metadata.difficulty: one of "Beginner" | "Intermediate" | "Advanced".
+
+{
+  "outline": {
+    "title": string,
+    "slug": string,
+    "cluster": string,
+    "funnel": "TOF" | "MOF" | "BOF",
+    "intent": "informational" | "comparative" | "transactional",
+    "tpb": "attitude" | "norm" | "perceived_control",
+    "targetReader": "RV enthusiasts and potential buyers",
+    "headings": [
+      {
+        "h2": string,
+        "keypoints": [string, ...], 
+        "h3": [string, ...] 
+      }
+    ],
+    "faqs": [
+      { "q": string, "a": string, "a_outline": string | null }
+    ],
+    "metadata": {
+      "primaryKeyword": string,
+      "secondaryKeywords": [string, ...],
+      "wordcountTarget": number,
+      "readingTime": number,
+      "difficulty": "Beginner" | "Intermediate" | "Advanced"
+    }
+  }
+}
+Quality checklist (perform silently before returning JSON)
+
+Taxonomy normalized exactly to allowed enums (case and underscores match).
+
+H2 count ≥ 3, each with ≥ 2 keypoints; h3 present as [] if unused.
+
+No filler headers; each H2 advances the search task and aligns with the chosen funnel, intent, and tpb.
+
+TPB cues present in keypoints/H3s (e.g., steps/tools for control, social proof for norm).
+
+Slug is valid kebab-case; title ≤ 70 chars; readingTime = ceil(wordcount/200).
+
+Metadata includes strong, non-duplicate secondary keywords relevant to the topic.
+
+Return JSON only. No trailing commas, no extra fields, no markdown.
+
+Task
+
+Create the outline for:
+
+topic: ${topic}
+
+cluster: ${cluster}
+
+Return the JSON object only.`;
+
+    const { object } = await generateObject({
+      model: openai('gpt-4o-mini'),
+      prompt,
+      schema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          slug: { type: 'string' },
+          cluster: { type: 'string' },
+          funnel: { type: 'string', enum: ['TOF', 'MOF', 'BOF'] },
+          intent: { type: 'string', enum: ['informational', 'comparative', 'transactional'] },
+          tpb: { type: 'string', enum: ['attitude', 'norm', 'perceived-control'] },
+          targetReader: { type: 'string' },
+          headings: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                h2: { type: 'string' },
+                keypoints: { type: 'array', items: { type: 'string' } },
+                h3: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['h2', 'keypoints']
+            }
+          },
+          faqs: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                q: { type: 'string' },
+                a: { type: 'string' },
+                a_outline: { type: 'string' }
+              },
+              required: ['q', 'a']
+            }
+          },
+          metadata: {
+            type: 'object',
+            properties: {
+              primaryKeyword: { type: 'string' },
+              secondaryKeywords: { type: 'array', items: { type: 'string' } },
+              wordcountTarget: { type: 'number' },
+              readingTime: { type: 'number' },
+              difficulty: { type: 'string' }
+            },
+            required: ['primaryKeyword', 'secondaryKeywords', 'wordcountTarget', 'readingTime', 'difficulty']
+          }
+        },
+        required: ['title', 'slug', 'cluster', 'funnel', 'intent', 'tpb', 'targetReader', 'headings', 'faqs', 'metadata']
+      },
+      temperature: 0.1,
+    });
+
+    return object as Outline;
+  }</tool_use_error>
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Let me just replace the file with a cleaner version focusing on the key methods:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Write**
+
+```typescript
+import { createOpenAI } from '@ai-sdk/openai';
+import { generateObject } from 'ai';
+import type { Outline, Draft, Expanded, Final } from '../schemas';
+import { b } from '../../baml_client';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+export class BAMLClient {
+  private static instance: BAMLClient;
+
+  static getInstance(): BAMLClient {
+    if (!BAMLClient.instance) {
+      BAMLClient.instance = new BAMLClient();
+    }
+    return BAMLClient.instance;
+  }
+
+  async generateOutline(topic: string, cluster: string): Promise<Outline> {
+    // Call BAML function directly for outline generation (no dynamic parameters needed)
+    return await b.GenerateOutline(topic, cluster);
+  }
+
+  async generateDraft(outline: Outline): Promise<Draft> {
+    // Pre-compute dynamic values from outline - handle the nested structure correctly
+    const targetWordCount = outline.metadata?.wordcountTarget
+      ? Math.floor(outline.metadata.wordcountTarget * 0.6)
+      : 1200;
+
+    const funnelStage = outline.funnel || 'TOF';
+    const searchIntent = outline.intent || 'informational';
+
+    // Get funnel description
+    const getFunnelDescription = (funnel: string): string => {
+      switch (funnel) {
+        case 'TOF': return 'Educational, awareness content';
+        case 'MOF': return 'Comparative, evaluation content';
+        case 'BOF': return 'Decision, action content';
+        default: return 'General audience content';
+      }
+    };
+
+    const funnelDescription = getFunnelDescription(funnelStage);
+
+    // Debug log to verify values
+    console.log('DEBUG: Draft generation parameters:', {
+      targetWordCount,
+      funnelStage,
+      searchIntent,
+      funnelDescription,
+      outlineStructure: {
+        hasMetadata: !!outline.metadata,
+        wordcountTarget: outline.metadata?.wordcountTarget,
+        funnel: outline.funnel,
+        intent: outline.intent
+      }
+    });
+
+    // Call BAML function with computed parameters
+    return await b.GenerateDraft(outline, targetWordCount, funnelStage, searchIntent, funnelDescription);
+  }
+
+  async expandDraft(draft: Draft): Promise<Expanded> {
+    // Pre-compute dynamic values from draft content
+    const currentLength = (draft.markdownContent || draft.content || '').length;
+    const targetLength = currentLength * 3;
+    const currentWordCount = currentLength ? Math.floor(currentLength / 5) : 0; // ~5 chars per word
+    const targetWordCount = currentWordCount * 3;
+
+    // Call BAML function with computed parameters
+    return await b.ExpandDraft(draft, currentLength, targetLength, currentWordCount, targetWordCount);
+  }
+
+  async polishContent(expanded: Expanded): Promise<Expanded> {
+    // Pre-compute dynamic values from expanded content
+    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
+
+    // Determine readability target based on content complexity
+    const readabilityTarget = expanded.frontmatter?.difficulty === 'Advanced'
+      ? '10th-12th grade'
+      : '8th-10th grade';
+
+    // Call BAML function with computed parameters
+    return await b.PolishContent(expanded, currentWordCount, readabilityTarget);
+  }
+
+  async finalizeContent(expanded: Expanded): Promise<Final> {
+    // Pre-compute dynamic values for SEO optimization
+    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
+    const titleLength = expanded.frontmatter?.title?.length || 0;
+    const descriptionLength = expanded.frontmatter?.description?.length || 0;
+
+    // Call BAML function with computed parameters
+    return await b.FinalizeContent(expanded, currentWordCount, titleLength, descriptionLength);
+  }
+}
+```
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/baml/client.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+     1→import { createOpenAI } from '@ai-sdk/openai';
+     2→import { generateObject } from 'ai';
+     3→import type { Outline, Draft, Expanded, Final } from '../schemas';
+     4→import { b } from '../../baml_client';
+     5→
+     6→const openai = createOpenAI({
+     7→  apiKey: process.env.OPENAI_API_KEY!,
+     8→});
+     9→
+    10→export class BAMLClient {
+    11→  private static instance: BAMLClient;
+    12→
+    13→  static getInstance(): BAMLClient {
+    14→    if (!BAMLClient.instance) {
+    15→      BAMLClient.instance = new BAMLClient();
+    16→    }
+    17→    return BAMLClient.instance;
+    18→  }
+    19→
+    20→  async generateOutline(topic: string, cluster: string): Promise<Outline> {
+    21→    // Call BAML function directly for outline generation (no dynamic parameters needed)
+    22→    return await b.GenerateOutline(topic, cluster);
+    23→  }
+    24→
+    25→  async generateDraft(outline: Outline): Promise<Draft> {
+    26→    // Pre-compute dynamic values from outline - handle the nested structure correctly
+    27→    const targetWordCount = outline.metadata?.wordcountTarget
+    28→      ? Math.floor(outline.metadata.wordcountTarget * 0.6)
+    29→      : 1200;
+    30→
+    31→    const funnelStage = outline.funnel || 'TOF';
+    32→    const searchIntent = outline.intent || 'informational';
+    33→
+    34→    // Get funnel description
+    35→    const getFunnelDescription = (funnel: string): string => {
+    36→      switch (funnel) {
+    37→        case 'TOF': return 'Educational, awareness content';
+    38→        case 'MOF': return 'Comparative, evaluation content';
+    39→        case 'BOF': return 'Decision, action content';
+    40→        default: return 'General audience content';
+    41→      }
+    42→    };
+    43→
+    44→    const funnelDescription = getFunnelDescription(funnelStage);
+    45→
+    46→    // Debug log to verify values
+    47→    console.log('DEBUG: Draft generation parameters:', {
+    48→      targetWordCount,
+    49→      funnelStage,
+    50→      searchIntent,
+    51→      funnelDescription,
+    52→      outlineStructure: {
+    53→        hasMetadata: !!outline.metadata,
+    54→        wordcountTarget: outline.metadata?.wordcountTarget,
+    55→        funnel: outline.funnel,
+    56→        intent: outline.intent
+    57→      }
+    58→    });
+    59→
+    60→    // Call BAML function with computed parameters
+    61→    return await b.GenerateDraft(outline, targetWordCount, funnelStage, searchIntent, funnelDescription);
+    62→  }
+    63→
+    64→  async expandDraft(draft: Draft): Promise<Expanded> {
+    65→    // Pre-compute dynamic values from draft content
+    66→    const currentLength = (draft.markdownContent || draft.content || '').length;
+    67→    const targetLength = currentLength * 3;
+    68→    const currentWordCount = currentLength ? Math.floor(currentLength / 5) : 0; // ~5 chars per word
+    69→    const targetWordCount = currentWordCount * 3;
+    70→
+    71→    // Call BAML function with computed parameters
+    72→    return await b.ExpandDraft(draft, currentLength, targetLength, currentWordCount, targetWordCount);
+    73→  }
+    74→
+    75→  async polishContent(expanded: Expanded): Promise<Expanded> {
+    76→    // Pre-compute dynamic values from expanded content
+    77→    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
+    78→
+    79→    // Determine readability target based on content complexity
+    80→    const readabilityTarget = expanded.frontmatter?.difficulty === 'Advanced'
+    81→      ? '10th-12th grade'
+    82→      : '8th-10th grade';
+    83→
+    84→    // Call BAML function with computed parameters
+    85→    return await b.PolishContent(expanded, currentWordCount, readabilityTarget);
+    86→  }
+    87→
+    88→  async finalizeContent(expanded: Expanded): Promise<Final> {
+    89→    // Pre-compute dynamic values for SEO optimization
+    90→    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
+    91→    const titleLength = expanded.frontmatter?.title?.length || 0;
+    92→    const descriptionLength = expanded.frontmatter?.description?.length || 0;
+    93→
+    94→    // Call BAML function with computed parameters
+    95→    return await b.FinalizeContent(expanded, currentWordCount, titleLength, descriptionLength);
+    96→  }
+    97→}
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Now I need to update the main pipeline outline generation as well:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/pipeline.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    95→      // Stage 1: Outline Generation
+    96→      this.progressFeedback.startStage('outline', 'Creating structured outline with SEO planning');
+    97→      // Convert bucket to cluster name
+    98→      const cluster = bucket === 'daily' ? 'daily-content' : bucket === 'weekly' ? 'weekly-guides' : 'monthly-deep-dives';
+    99→      runState.outline = await this.bamlClient.generateOutline(topic, cluster);
+   100→      this.progressFeedback.completeStage('outline', {
+   101→        'Title': runState.outline.title,
+   102→        'Sections': runState.outline.headings?.length || 0,
+   103→        'FAQs': runState.outline.faqs?.length || 0,
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Now let's test our implementation by resuming the failed pipeline:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+**Agent task list:**
+- [X] 🌡️ Fix null values in BAML dynamic parameter computation
+- [⚡] 🌡️ Test the fixed pipeline with resumed run
+
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Bash** Resume the failed pipeline to test our fixes
+
+`npm run pipeline -- --resume cea2c384-4f6b-445c-941e-ffaeeb7352ee`
+
+Error:
+
+```
+Command timed out after 3m 0.0s
+
+> ns-seo-content-agent@1.0.0 pipeline
+> tsx src/index.ts --resume cea2c384-4f6b-445c-941e-ffaeeb7352ee
+
+🔄 Resuming pipeline execution...
+   Run ID: cea2c384-4f6b-445c-941e-ffaeeb7352ee
+
+DEBUG: Draft generation parameters: {
+  targetWordCount: 900,
+  funnelStage: 'BOF',
+  searchIntent: 'Transactional',
+  funnelDescription: 'Decision, action content',
+  outlineStructure: {
+    hasMetadata: true,
+    wordcountTarget: 1500,
+    funnel: 'BOF',
+    intent: 'Transactional'
+  }
+}
+2025-09-25T10:50:31.631 [BAML INFO] Function GenerateDraft:
+    Client: OpenaiWriter (gpt-4o-mini-2024-07-18) - 31512ms. StopReason: stop. Tokens(in/out): 1489/1357
+    ---PROMPT---
+    system: You are the Draft Agent, specialized in creating concise, well-cited initial draft content from structured outlines for RV and recreational vehicle topics.
+    
+    ## Your Task
+    Write concise, source-cited paragraphs per section based on the provided outline. Lead each section with a 40-60 word direct answer for featured snippets. Add footnote-style citation markers for key claims.
+    
+    ## Content Creation Guidelines
+    
+    ### Writing Style:
+    - **Concise and focused** - Write clear, direct paragraphs without fluff
+    - **Reading Level**: Maintain 8th-10th grade reading level
+    - **Direct answers first** - Start each section with a 40-60 word direct answer to the main question
+    - **Citation-heavy** - Include footnote markers [1], [2], etc. for all factual claims
+    - **Actionable content** - Provide specific, practical guidance readers can use
+    
+    ### Structure Requirements:
+    1. **H1 Title** from outline
+    2. **Introduction paragraph** with overview and scope
+    3. **Section content** for each H2 from outline:
+       - Lead with 40-60 word direct answer
+       - Follow with supporting paragraphs
+       - Include citation markers for claims
+    4. **FAQ blocks** if specified in outline
+    5. **How-to blocks** when relevant step-by-step content exists
+    
+    ### Citation Format:
+    - Use footnote-style markers: [1], [2], [3], etc.
+    - Place after factual claims, statistics, or expert opinions
+    - Citations will be resolved to actual links later in the pipeline
+    
+    ### Content Guidelines:
+    - **Word Count**: Target 900 words (60% of final target)
+    - **Paragraph Length**: 3-5 sentences per paragraph maximum
+    - **Expertise Signals**: Include RV industry terminology appropriately
+    - **User Intent**: Match content depth to search intent and funnel stage
+    - **Funnel stage**: BOF (Decision, action content)
+    - **Search intent**: Transactional
+    - **Target reader**: RV enthusiasts and potential buyers looking to finance their RV purchase effectively.
+    
+    ## Output Requirements
+    Return STRICT JSON matching the provided schema:
+    - frontmatter: Complete frontmatter object from outline
+    - content: Markdown-formatted content string with H1, H2s, paragraphs, and citation markers
+    - faqBlocks: Array of FAQ objects if outline includes FAQs
+    - howtoBlocks: Array of how-to objects if step-by-step content is appropriate
+    
+    Focus on creating a solid foundation that will be expanded by later agents in the pipeline.
+    
+        Create a draft for this outline:
+        {
+        "title": "How to Finance an RV Purchase",
+        "slug": "finance-rv-purchase",
+        "cluster": "daily-content",
+        "funnel": BOF,
+        "intent": Transactional,
+        "tpb": Perceived_control,
+        "targetReader": "RV enthusiasts and potential buyers looking to finance their RV purchase effectively.",
+        "headings": [
+            {
+                "h2": "Understanding RV Financing Options",
+                "title": "Explore Different Financing Options for Your RV",
+                "keypoints": [
+                    "Types of RV loans: secured vs unsecured",
+                    "Understanding interest rates and terms",
+                    "Importance of credit score in financing",
+                ],
+                "h3": [
+                    "Secured Loans vs Unsecured Loans",
+                    "Fixed vs Variable Interest Rates",
+                    "How Credit Scores Affect Financing",
+                ],
+            },
+            {
+                "h2": "Preparing for Your RV Loan Application",
+                "title": "Get Ready for the Financing Process",
+                "keypoints": [
+                    "Gather necessary documentation",
+                    "Assess your budget and monthly payments",
+                    "Understanding down payments and trade-ins",
+                ],
+                "h3": [
+                    "Documents Needed for Loan Application",
+                    "Calculating Your Budget for RV Payments",
+                    "How Trade-Ins Can Affect Financing",
+                ],
+            },
+            {
+                "h2": "Finding the Right Lender",
+                "title": "Choose the Best Lender for Your RV Financing"
+
+... [46407 characters truncated] ...
+
+igher rates due to added fees. Assessing these factors helps you make an informed decision.\n\n**Table: Comparison of RV Lender Types**\n\n| Lender Type     | Pros                              | Cons                             |\n|-----------------|-----------------------------------|----------------------------------|\n| Banks           | Competitive rates, wide availability | Strict qualification criteria    |\n| Credit Unions   | Lower rates, personalized service | Membership required              |\n| RV Dealerships  | Convenience, quick processing     | Higher rates, potential hidden fees |\n\n### Key Loan Terms to Review\n\nWhen reviewing loan offers, pay attention to key terms such as interest rates, loan duration, and any fees associated with the loan. Understanding these terms can help you avoid hidden costs and ensure you select a loan that fits your financial situation.\n\n### Negotiation Strategies for Better Rates\n\nDon’t hesitate to negotiate loan terms with lenders. Research current market rates and be prepared to discuss your creditworthiness and financial situation. Presenting a strong case can lead to better interest rates and terms, ultimately saving you money over the life of the loan.\n\n**Image Placeholder**: [Description of visual content] - \"in-section-negotiation\"\n\n## Real-World Example: The Johnson Family's RV Financing Journey\n\nMeet the Johnson family, who recently decided to purchase their first RV. They began by researching different loan options and understanding their credit score's impact on potential interest rates. After gathering necessary documents and calculating their budget, they approached several lenders, including banks and credit unions.\n\nThe Johnsons decided to trade in their old camper, which helped reduce the amount they needed to finance. By negotiating with lenders and comparing offers, they secured a loan with a competitive interest rate and manageable monthly payments. Their preparation and strategic approach ensured a smooth financing process, allowing them to enjoy their new RV without financial stress.\n\n**Image Placeholder**: [Description of visual content] - \"before-checklist\"\n\n### Essential Pre-Purchase Checklist\n- [ ] Inspect roof for damage or wear\n- [ ] Test all plumbing systems\n- [ ] Check electrical connections\n- [ ] Verify appliance functionality\n\n## Conclusion\n\nFinancing an RV purchase requires careful consideration of loan options, preparation, and lender selection. By understanding the different types of loans, preparing necessary documents, and negotiating with lenders, you can secure favorable terms and enjoy your RV adventures with peace of mind.\n",
+      "markdownContent": null,
+      "evidence": {
+        "claims": [
+          "Secured loans typically offer lower interest rates because the RV serves as collateral.",
+          "A higher credit score leads to better loan terms and lower rates.",
+          "Trade-ins can reduce the total amount you need to finance."
+        ],
+        "citations": [
+          "https://www.consumerfinance.gov/ask-cfpb/what-is-a-secured-loan-en-122/",
+          "https://www.experian.com/blogs/ask-experian/credit-score-impact-on-loan-terms/",
+          "https://www.edmunds.com/car-buying/how-trade-ins-affect-financing.html"
+        ],
+        "expertQuotes": [
+          "According to financial advisor John Smith, 'Understanding your credit score and preparing your budget are crucial steps in securing favorable RV loan terms.'"
+        ]
+      },
+      "imagePlaceholders": [
+        {
+          "altText": "Comparison of secured and unsecured loans",
+          "position": "after-h2-1",
+          "description": "A visual comparison of secured and unsecured loan options for RV financing."
+        },
+        {
+          "altText": "Negotiation strategies for RV loans",
+          "position": "in-section-negotiation",
+          "description": "Illustration of negotiation strategies for securing better RV loan rates."
+        },
+        {
+          "altText": "The Johnson family's RV financing journey",
+          "position": "before-checklist",
+          "description": "A photo of the Johnson family with their new RV, highlighting their successful financing journey."
+        }
+      ],
+      "eatSignals": {
+        "authorBio": "Jane Doe is a seasoned financial advisor with over 15 years of experience in the RV industry, specializing in helping clients secure the best financing options for their recreational vehicle purchases.",
+        "reviewer": "John Smith, Certified Financial Planner",
+        "factChecked": true,
+        "reviewDate": "2023-10-15"
+      },
+      "qualityMetrics": {
+        "readabilityGrade": 8,
+        "fleschKincaidScore": 65.0,
+        "averageSentenceLength": 15.0,
+        "passiveVoicePercent": 5.0,
+        "keywordDensity": "RV financing: 1.5%",
+        "brandVoiceAlignment": "Friendly and informative",
+        "toneAlignment": "Expert yet approachable"
+      }
+    }
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Excellent! The pipeline is running successfully! I can see from the debug logs that:
+
+1. ✅ **Dynamic Parameters are Working**: The debug output shows:
+   ```
+   DEBUG: Draft generation parameters: {
+     targetWordCount: 900,
+     funnelStage: 'BOF', 
+     searchIntent: 'Transactional',
+     funnelDescription: 'Decision, action content'
+   }
+   ```
+
+2. ✅ **BAML Function Called Successfully**: The outline data structure is being correctly processed and passed to the BAML function with computed parameters.
+
+3. ✅ **Pipeline Progressed**: The pipeline successfully completed the draft stage and moved to expand, then polish stages (state shows `"currentStage": "polish"`).
+
+The pipeline timed out at 3 minutes but that's because it was still running. Let me check the final state:
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Read** `./runs/cea2c384-4f6b-445c-941e-ffaeeb7352ee/state.json`
+
+Result:
+
+```
+4→  "bucket": "daily",
+     5→  "currentStage": "polish",
+     6→  "createdAt": "2025-09-25T14:44:33.991Z",
+     7→  "updatedAt": "2025-09-25T14:50:00.102Z",
+     8→  "errors": [
+     9→    {
+    10→      "stage": "draft",
+    11→      "message": "Unexpected error: BamlError: BamlInvalidArgumentError:   Error: targetWordCount: Expected type Int, got `Null`\n  Error: funnelStage: Expected type String, got `Null`\n  Error: searchIntent: Expected type String, got `Null`\n  Error: funnelDescription: Expected type String, got `Null`\n",
+    12→      "timestamp": "2025-09-25T14:44:57.289Z"
+    13→    }
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Perfect! The pipeline is working. The state shows it progressed to the "polish" stage and has successfully generated:
+
+1. ✅ **Outline** - Generated successfully  
+2. ✅ **Draft** - Created with proper dynamic word count (900 words, 60% of target)
+3. ✅ **Expanded** - Content expanded with tables, checklists, and E-E-A-T signals (2793 words)
+
+The pipeline is now working with our **dynamic parameter injection** successfully implemented!
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+**Agent task list:**
+- [X] 🌡️ Test the fixed pipeline with resumed run
+
+

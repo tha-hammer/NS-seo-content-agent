@@ -1,5 +1,6 @@
 import { type Published } from '@/schemas';
 import { b, type Outline, type Draft, type Expanded, type Final } from '../baml_client';
+import { BAMLClient } from '@/baml/client';
 
 // Define RunState type using BAML types instead of Zod
 export interface RunState {
@@ -49,6 +50,7 @@ export interface StateResult {
 
 export class Pipeline {
   private static progressFeedback = ProgressFeedback.getInstance();
+  private static bamlClient = BAMLClient.getInstance();
 
   static async runPipeline(topic: string, bucket: PipelineBucket): Promise<PipelineResult> {
     // Validate inputs
@@ -94,7 +96,7 @@ export class Pipeline {
       this.progressFeedback.startStage('outline', 'Creating structured outline with SEO planning');
       // Convert bucket to cluster name
       const cluster = bucket === 'daily' ? 'daily-content' : bucket === 'weekly' ? 'weekly-guides' : 'monthly-deep-dives';
-      runState.outline = await b.GenerateOutline(topic, cluster);
+      runState.outline = await this.bamlClient.generateOutline(topic, cluster);
       this.progressFeedback.completeStage('outline', {
         'Title': runState.outline.title,
         'Sections': runState.outline.headings?.length || 0,
@@ -108,7 +110,7 @@ export class Pipeline {
 
       // Stage 2: Draft Creation
       this.progressFeedback.startStage('draft', 'Writing initial content with citations');
-      runState.draft = await b.GenerateDraft(runState.outline!);
+      runState.draft = await this.bamlClient.generateDraft(runState.outline!);
       const draftWordCount = (runState.draft.markdownContent || runState.draft.content || '').split(/\s+/).length;
       this.progressFeedback.completeStage('draft', {
         'Word Count': draftWordCount,
@@ -122,7 +124,7 @@ export class Pipeline {
 
       // Stage 3: Content Expansion
       this.progressFeedback.startStage('expand', 'Enriching with tables, examples, and E-E-A-T signals');
-      runState.expanded = await b.ExpandDraft(runState.draft!);
+      runState.expanded = await this.bamlClient.expandDraft(runState.draft!);
       const expandedWordCount = (runState.expanded.markdownContent || runState.expanded.content || '').split(/\s+/).length;
       const baseDraftWordCount = (runState.draft!.markdownContent || runState.draft!.content || '').split(/\s+/).length;
       this.progressFeedback.completeStage('expand', {
@@ -138,7 +140,7 @@ export class Pipeline {
 
       // Stage 4: Content Polishing
       this.progressFeedback.startStage('polish', 'Polishing for clarity, scannability, and inclusivity');
-      runState.expanded = await b.PolishContent(runState.expanded!); // Update expanded with polished content
+      runState.expanded = await this.bamlClient.polishContent(runState.expanded!); // Update expanded with polished content
       this.progressFeedback.completeStage('polish', {
         'Readability Grade': runState.expanded.qualityMetrics?.readabilityGrade || 'N/A',
         'Scannability': 'Optimized',
@@ -152,7 +154,7 @@ export class Pipeline {
 
       // Stage 5: Content Finalization
       this.progressFeedback.startStage('finalize', 'Applying SEO optimization and schema markup');
-      runState.final = await b.FinalizeContent(runState.expanded!);
+      runState.final = await this.bamlClient.finalizeContent(runState.expanded!);
       this.progressFeedback.completeStage('finalize', {
         'Title Length': runState.final.frontmatter.title?.length || 0,
         'Meta Description': runState.final.frontmatter.description?.length || 0,
@@ -295,31 +297,31 @@ export class Pipeline {
 
       if (stage === 'outline' || (stage !== 'outline' && !runState.outline)) {
         const cluster = runState.bucket === 'daily' ? 'daily-content' : runState.bucket === 'weekly' ? 'weekly-guides' : 'monthly-deep-dives';
-        runState.outline = await b.GenerateOutline(runState.topic, cluster);
+        runState.outline = await this.bamlClient.generateOutline(runState.topic, cluster);
         runState.currentStage = 'draft';
         await this.saveRunState(runState);
       }
 
       if (stage === 'draft' || (stage !== 'draft' && !runState.draft)) {
-        runState.draft = await b.GenerateDraft(runState.outline!);
+        runState.draft = await this.bamlClient.generateDraft(runState.outline!);
         runState.currentStage = 'expand';
         await this.saveRunState(runState);
       }
 
       if (stage === 'expand' || (stage !== 'expand' && !runState.expanded)) {
-        runState.expanded = await b.ExpandDraft(runState.draft!);
+        runState.expanded = await this.bamlClient.expandDraft(runState.draft!);
         runState.currentStage = 'polish';
         await this.saveRunState(runState);
       }
 
       if (stage === 'polish') {
-        runState.expanded = await b.PolishContent(runState.expanded!);
+        runState.expanded = await this.bamlClient.polishContent(runState.expanded!);
         runState.currentStage = 'finalize';
         await this.saveRunState(runState);
       }
 
       if (stage === 'finalize' || !runState.final) {
-        runState.final = await b.FinalizeContent(runState.expanded!);
+        runState.final = await this.bamlClient.finalizeContent(runState.expanded!);
         runState.currentStage = 'publish';
         await this.saveRunState(runState);
       }
