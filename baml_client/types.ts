@@ -101,15 +101,18 @@ export interface Expanded {
 }
 
 export interface FAQ {
-  q: string
-  a: string
+  q?: string | null
+  question?: string | null
+  answer?: string | null
   a_outline?: string | null
   
 }
 
 export interface FAQBlock {
-  question: string
-  answer: string
+  q?: string | null
+  question?: string | null
+  a?: string | null
+  answer?: string | null
   
 }
 
@@ -126,17 +129,17 @@ export interface Final {
 }
 
 export interface Frontmatter {
-  title: string
-  description: string
-  slug: string
-  date: string
-  author: string
-  tags: string[]
-  category: string
-  funnel: FunnelStage
-  intent: SearchIntent
-  primaryKeyword: string
-  secondaryKeywords: string[]
+  title?: string | null
+  description?: string | null
+  slug?: string | null
+  date?: string | null
+  author?: string | null
+  tags?: string[] | null
+  category?: string | null
+  funnel?: FunnelStage | null
+  intent?: SearchIntent | null
+  primaryKeyword?: string | null
+  secondaryKeywords?: string[] | null
   wordcount?: number | null
   readingTime?: number | null
   schema?: string[] | null
@@ -144,8 +147,9 @@ export interface Frontmatter {
 }
 
 export interface Heading {
-  h2: string
-  keypoints: string[]
+  h2?: string | null
+  title?: string | null
+  keypoints?: string[] | null
   h3?: string[] | null
   
 }
@@ -157,9 +161,11 @@ export interface HowToBlock {
 }
 
 export interface HowToStep {
-  step: number
-  description: string
-  text: string
+  step?: number | null
+  position?: number | null
+  description?: string | null
+  instruction?: string | null
+  text?: string | null
   
 }
 

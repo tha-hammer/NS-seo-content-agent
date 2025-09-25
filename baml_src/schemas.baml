@@ -25,14 +25,16 @@ class Metadata {
 }
 
 class Heading {
-  h2 string
-  keypoints string[]
+  h2 string?
+  title string?
+  keypoints string[]?
   h3 string[]?
 }
 
 class FAQ {
-  q string
-  a string
+  q string?
+  question string?
+  answer string?
   a_outline string?
 }
 
@@ -50,26 +52,28 @@ class Outline {
 }
 
 class Frontmatter {
-  title string
-  description string
-  slug string
-  date string
-  author string
-  tags string[]
-  category string
-  funnel FunnelStage
-  intent SearchIntent
-  primaryKeyword string
-  secondaryKeywords string[]
+  title string?
+  description string?
+  slug string?
+  date string?
+  author string?
+  tags string[]?
+  category string?
+  funnel FunnelStage?
+  intent SearchIntent?
+  primaryKeyword string?
+  secondaryKeywords string[]?
   wordcount int?
   readingTime int?
   schema string[]?
 }
 
 class HowToStep {
-  step int
-  description string
-  text string
+  step int?
+  position int?
+  description string?
+  instruction string?
+  text string?
 }
 
 class HowToBlock {
@@ -78,8 +82,10 @@ class HowToBlock {
 }
 
 class FAQBlock {
-  question string
-  answer string
+  q string?
+  question string?
+  a string?
+  answer string?
 }
 
 class Draft {

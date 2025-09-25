@@ -35,19 +35,19 @@ export default class TypeBuilder {
     
     Expanded: ClassViewer<'Expanded', "frontmatter" | "content" | "markdownContent" | "evidence" | "imagePlaceholders" | "eatSignals" | "qualityMetrics">;
     
-    FAQ: ClassViewer<'FAQ', "q" | "a" | "a_outline">;
+    FAQ: ClassViewer<'FAQ', "q" | "question" | "answer" | "a_outline">;
     
-    FAQBlock: ClassViewer<'FAQBlock', "question" | "answer">;
+    FAQBlock: ClassViewer<'FAQBlock', "q" | "question" | "a" | "answer">;
     
     Final: ClassViewer<'Final', "frontmatter" | "content" | "markdownContent" | "evidence" | "imagePlaceholders" | "eatSignals" | "qualityMetrics" | "seoOptimizations">;
     
     Frontmatter: ClassViewer<'Frontmatter', "title" | "description" | "slug" | "date" | "author" | "tags" | "category" | "funnel" | "intent" | "primaryKeyword" | "secondaryKeywords" | "wordcount" | "readingTime" | "schema">;
     
-    Heading: ClassViewer<'Heading', "h2" | "keypoints" | "h3">;
+    Heading: ClassViewer<'Heading', "h2" | "title" | "keypoints" | "h3">;
     
     HowToBlock: ClassViewer<'HowToBlock', "title" | "steps">;
     
-    HowToStep: ClassViewer<'HowToStep', "step" | "description" | "text">;
+    HowToStep: ClassViewer<'HowToStep', "step" | "position" | "description" | "instruction" | "text">;
     
     ImagePlaceholder: ClassViewer<'ImagePlaceholder', "altText" | "position" | "description">;
     
@@ -97,11 +97,11 @@ export default class TypeBuilder {
         ]);
         
         this.FAQ = this.tb.classViewer("FAQ", [
-          "q","a","a_outline",
+          "q","question","answer","a_outline",
         ]);
         
         this.FAQBlock = this.tb.classViewer("FAQBlock", [
-          "question","answer",
+          "q","question","a","answer",
         ]);
         
         this.Final = this.tb.classViewer("Final", [
@@ -113,7 +113,7 @@ export default class TypeBuilder {
         ]);
         
         this.Heading = this.tb.classViewer("Heading", [
-          "h2","keypoints","h3",
+          "h2","title","keypoints","h3",
         ]);
         
         this.HowToBlock = this.tb.classViewer("HowToBlock", [
@@ -121,7 +121,7 @@ export default class TypeBuilder {
         ]);
         
         this.HowToStep = this.tb.classViewer("HowToStep", [
-          "step","description","text",
+          "step","position","description","instruction","text",
         ]);
         
         this.ImagePlaceholder = this.tb.classViewer("ImagePlaceholder", [

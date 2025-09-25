@@ -36,7 +36,7 @@ export class HttpRequest {
 
   
   ExpandDraft(
-      draft: types.Draft,
+      draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -47,7 +47,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "ExpandDraft",
         {
-          "draft": draft
+          "draft": draft,"currentLength": currentLength,"targetLength": targetLength,"currentWordCount": currentWordCount,"targetWordCount": targetWordCount
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -61,7 +61,7 @@ export class HttpRequest {
   }
   
   FinalizeContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,titleLength: number,descriptionLength: number,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -72,7 +72,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "FinalizeContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"titleLength": titleLength,"descriptionLength": descriptionLength
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -86,7 +86,7 @@ export class HttpRequest {
   }
   
   GenerateDraft(
-      outline: types.Outline,
+      outline: types.Outline,targetWordCount: number,funnelStage: string,searchIntent: string,funnelDescription: string,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -97,7 +97,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "GenerateDraft",
         {
-          "outline": outline
+          "outline": outline,"targetWordCount": targetWordCount,"funnelStage": funnelStage,"searchIntent": searchIntent,"funnelDescription": funnelDescription
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -136,7 +136,7 @@ export class HttpRequest {
   }
   
   PolishContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,readabilityTarget: string,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -147,7 +147,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "PolishContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"readabilityTarget": readabilityTarget
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -167,7 +167,7 @@ export class HttpStreamRequest {
 
   
   ExpandDraft(
-      draft: types.Draft,
+      draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -178,7 +178,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "ExpandDraft",
         {
-          "draft": draft
+          "draft": draft,"currentLength": currentLength,"targetLength": targetLength,"currentWordCount": currentWordCount,"targetWordCount": targetWordCount
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -192,7 +192,7 @@ export class HttpStreamRequest {
   }
   
   FinalizeContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,titleLength: number,descriptionLength: number,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -203,7 +203,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "FinalizeContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"titleLength": titleLength,"descriptionLength": descriptionLength
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -217,7 +217,7 @@ export class HttpStreamRequest {
   }
   
   GenerateDraft(
-      outline: types.Outline,
+      outline: types.Outline,targetWordCount: number,funnelStage: string,searchIntent: string,funnelDescription: string,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -228,7 +228,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "GenerateDraft",
         {
-          "outline": outline
+          "outline": outline,"targetWordCount": targetWordCount,"funnelStage": funnelStage,"searchIntent": searchIntent,"funnelDescription": funnelDescription
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -267,7 +267,7 @@ export class HttpStreamRequest {
   }
   
   PolishContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,readabilityTarget: string,
       __baml_options__?: BamlCallOptions
   ): HTTPRequest {
     try {
@@ -278,7 +278,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "PolishContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"readabilityTarget": readabilityTarget
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

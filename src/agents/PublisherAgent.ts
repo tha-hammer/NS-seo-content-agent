@@ -50,66 +50,58 @@ export class PublisherAgent {
     // Note: output schema removed due to SDK compatibility
   });
 
-  static async publishContent(final: Final): Promise<{ success: boolean; data?: Published; error?: string }> {
+  static async publishContent(final: Final, runId?: string): Promise<{ success: boolean; data?: Published; error?: string }> {
     try {
-      const prompt = `Publish this finalized content to a markdown file:
+      // Generate markdown content ourselves instead of asking LLM to do it
+      const markdownContent = this.generateMarkdown(final);
 
-**Frontmatter:**
-${JSON.stringify(final.frontmatter, null, 2)}
-
-**Content:**
-${final.content}
-
-**SEO Optimizations:**
-${JSON.stringify(final.seoOptimizations, null, 2)}
-
-**Quality Metrics:**
-${JSON.stringify(final.qualityMetrics, null, 2)}
-
-Please:
-1. Generate proper markdown with YAML frontmatter
-2. Create appropriate file path based on category and slug
-3. Calculate checksums for file integrity
-4. Validate all content and metadata
-5. Create backup with timestamp
-6. Return complete publication information
-
-Generate the markdown content and publication metadata.`;
-
-      const response = await run(this.agent, prompt);
-      
-      const output = response.state._currentStep?.output;
-      if (!output) {
-        return { success: false, error: 'No output received from agent' };
+      // Generate file path in the run directory if runId provided, otherwise use content directory
+      let filePath: string;
+      if (runId) {
+        const config = getConfig();
+        filePath = path.join(config.paths.runs, runId, `${final.frontmatter.slug}.md`);
+      } else {
+        filePath = this.generateFilePath(final.frontmatter);
       }
 
-      // Parse and validate the response matches our schema
-      //const validation = PublishedSchema.safeParse(JSON.parse(output));
-      const repairedJson = repairJson(output);
-      const validation = PublishedSchema.parse(JSON.parse(repairedJson));
+      // Calculate checksums
+      const checksums = this.calculateChecksums(markdownContent);
 
-      if (!validation.success) {
-        return { 
-          success: false, 
-          error: `Schema validation failed: ${validation.error.message}` 
-        };
-      }
+      // Validate markdown
+      const validation = this.validateMarkdown(markdownContent);
 
-      const published = validation.data;
+      // Write the file
+      await this.writeFile(filePath, markdownContent);
 
-      // Actually write the file
-      await this.writeFile(published.filePath, published.markdownContent);
+      // Create backup
+      const backupPath = await this.createBackup(filePath, markdownContent);
 
-      // Create backup if specified
-      if (published.backupPath) {
-        await this.writeFile(published.backupPath, published.markdownContent);
-      }
+      // Create published object
+      const published: Published = {
+        filePath,
+        markdownContent,
+        frontmatter: final.frontmatter,
+        publishedAt: new Date().toISOString(),
+        fileSize: Buffer.byteLength(markdownContent, 'utf8'),
+        backupPath,
+        checksums,
+        validation: {
+          frontmatterValid: validation.isValid,
+          markdownValid: validation.isValid,
+          linksValid: true, // TODO: implement link validation
+          imagesValid: true // TODO: implement image validation
+        },
+        metadata: {
+          wordCount: markdownContent.split(/\s+/).length,
+          readingTime: Math.ceil(markdownContent.split(/\s+/).length / 200)
+        }
+      };
 
       return { success: true, data: published };
     } catch (error) {
-      return { 
-        success: false, 
-        error: `Publish processing failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      return {
+        success: false,
+        error: `Publish processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -135,64 +127,84 @@ Generate the markdown content and publication metadata.`;
   private static generateFrontmatter(frontmatter: Frontmatter): string {
     const yaml = ['---'];
     
-    // Add all frontmatter fields
+    // Add all frontmatter fields, handling undefined values
     yaml.push(`title: "${frontmatter.title}"`);
     yaml.push(`description: "${frontmatter.description}"`);
     yaml.push(`slug: "${frontmatter.slug}"`);
     yaml.push(`date: "${frontmatter.date}"`);
-    yaml.push(`updated: "${frontmatter.updated}"`);
+    if (frontmatter.updated) {
+      yaml.push(`updated: "${frontmatter.updated}"`);
+    }
     yaml.push(`author: "${frontmatter.author}"`);
-    
+
     if (frontmatter.reviewer) {
       yaml.push(`reviewer: "${frontmatter.reviewer}"`);
     }
-    
+
     yaml.push(`category: "${frontmatter.category}"`);
     yaml.push(`tags: [${frontmatter.tags.map(tag => `"${tag}"`).join(', ')}]`);
-    yaml.push(`cluster_id: "${frontmatter.cluster_id}"`);
-    
+    if (frontmatter.cluster_id) {
+      yaml.push(`cluster_id: "${frontmatter.cluster_id}"`);
+    }
+
     if (frontmatter.pillar_id) {
       yaml.push(`pillar_id: "${frontmatter.pillar_id}"`);
     }
-    
-    yaml.push(`stage: "${frontmatter.stage}"`);
+
+    if (frontmatter.stage) {
+      yaml.push(`stage: "${frontmatter.stage}"`);
+    }
     yaml.push(`intent: "${frontmatter.intent}"`);
-    yaml.push(`tpb: "${frontmatter.tpb}"`);
-    yaml.push(`canonical: "${frontmatter.canonical}"`);
-    
+    if (frontmatter.tpb) {
+      yaml.push(`tpb: "${frontmatter.tpb}"`);
+    }
+    if (frontmatter.canonical) {
+      yaml.push(`canonical: "${frontmatter.canonical}"`);
+    }
+
     if (frontmatter.og) {
       yaml.push(`og:`);
       if (frontmatter.og.image) yaml.push(`  image: "${frontmatter.og.image}"`);
-      yaml.push(`  type: "${frontmatter.og.type}"`);
+      if (frontmatter.og.type) yaml.push(`  type: "${frontmatter.og.type}"`);
     }
-    
+
     if (frontmatter.twitter) {
       yaml.push(`twitter:`);
-      yaml.push(`  card: "${frontmatter.twitter.card}"`);
+      if (frontmatter.twitter.card) yaml.push(`  card: "${frontmatter.twitter.card}"`);
       if (frontmatter.twitter.image) yaml.push(`  image: "${frontmatter.twitter.image}"`);
     }
-    
-    yaml.push(`toc: ${frontmatter.toc}`);
-    yaml.push(`reading_time: ${frontmatter.reading_time}`);
-    yaml.push(`word_count: ${frontmatter.word_count}`);
+
+    if (frontmatter.toc !== undefined) {
+      yaml.push(`toc: ${frontmatter.toc}`);
+    }
+    if (frontmatter.reading_time !== undefined) {
+      yaml.push(`reading_time: ${frontmatter.reading_time}`);
+    }
+    if (frontmatter.word_count !== undefined) {
+      yaml.push(`word_count: ${frontmatter.word_count}`);
+    }
     
     if (frontmatter.schema && frontmatter.schema.length > 0) {
       yaml.push(`schema:`);
       frontmatter.schema.forEach(schema => {
-        yaml.push(`  - "@context": "${schema['@context']}"`);
-        yaml.push(`    "@type": "${schema['@type']}"`);
-        if (schema.name) yaml.push(`    name: "${schema.name}"`);
-        if (schema.mainEntity) {
-          yaml.push(`    mainEntity:`);
-          schema.mainEntity.forEach((entity: any) => {
-            yaml.push(`      - "@type": "${entity['@type']}"`);
-            yaml.push(`        name: "${entity.name}"`);
-            if (entity.acceptedAnswer) {
-              yaml.push(`        acceptedAnswer:`);
-              yaml.push(`          "@type": "${entity.acceptedAnswer['@type']}"`);
-              yaml.push(`          text: "${entity.acceptedAnswer.text}"`);
-            }
-          });
+        if (schema['@context'] && schema['@type']) {
+          yaml.push(`  - "@context": "${schema['@context']}"`);
+          yaml.push(`    "@type": "${schema['@type']}"`);
+          if (schema.name) yaml.push(`    name: "${schema.name}"`);
+          if (schema.mainEntity) {
+            yaml.push(`    mainEntity:`);
+            schema.mainEntity.forEach((entity: any) => {
+              if (entity['@type']) {
+                yaml.push(`      - "@type": "${entity['@type']}"`);
+                if (entity.name) yaml.push(`        name: "${entity.name}"`);
+                if (entity.acceptedAnswer && entity.acceptedAnswer['@type']) {
+                  yaml.push(`        acceptedAnswer:`);
+                  yaml.push(`          "@type": "${entity.acceptedAnswer['@type']}"`);
+                  if (entity.acceptedAnswer.text) yaml.push(`          text: "${entity.acceptedAnswer.text}"`);
+                }
+              }
+            });
+          }
         }
       });
     }

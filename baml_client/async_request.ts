@@ -39,7 +39,7 @@ export class AsyncHttpRequest {
 
   
   async ExpandDraft(
-      draft: types.Draft,
+      draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -50,7 +50,7 @@ export class AsyncHttpRequest {
       return await this.runtime.buildRequest(
         "ExpandDraft",
         {
-          "draft": draft
+          "draft": draft,"currentLength": currentLength,"targetLength": targetLength,"currentWordCount": currentWordCount,"targetWordCount": targetWordCount
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -64,7 +64,7 @@ export class AsyncHttpRequest {
   }
   
   async FinalizeContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,titleLength: number,descriptionLength: number,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -75,7 +75,7 @@ export class AsyncHttpRequest {
       return await this.runtime.buildRequest(
         "FinalizeContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"titleLength": titleLength,"descriptionLength": descriptionLength
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -89,7 +89,7 @@ export class AsyncHttpRequest {
   }
   
   async GenerateDraft(
-      outline: types.Outline,
+      outline: types.Outline,targetWordCount: number,funnelStage: string,searchIntent: string,funnelDescription: string,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -100,7 +100,7 @@ export class AsyncHttpRequest {
       return await this.runtime.buildRequest(
         "GenerateDraft",
         {
-          "outline": outline
+          "outline": outline,"targetWordCount": targetWordCount,"funnelStage": funnelStage,"searchIntent": searchIntent,"funnelDescription": funnelDescription
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -139,7 +139,7 @@ export class AsyncHttpRequest {
   }
   
   async PolishContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,readabilityTarget: string,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -150,7 +150,7 @@ export class AsyncHttpRequest {
       return await this.runtime.buildRequest(
         "PolishContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"readabilityTarget": readabilityTarget
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -170,7 +170,7 @@ export class AsyncHttpStreamRequest {
 
   
   async ExpandDraft(
-      draft: types.Draft,
+      draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -181,7 +181,7 @@ export class AsyncHttpStreamRequest {
       return await this.runtime.buildRequest(
         "ExpandDraft",
         {
-          "draft": draft
+          "draft": draft,"currentLength": currentLength,"targetLength": targetLength,"currentWordCount": currentWordCount,"targetWordCount": targetWordCount
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -195,7 +195,7 @@ export class AsyncHttpStreamRequest {
   }
   
   async FinalizeContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,titleLength: number,descriptionLength: number,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -206,7 +206,7 @@ export class AsyncHttpStreamRequest {
       return await this.runtime.buildRequest(
         "FinalizeContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"titleLength": titleLength,"descriptionLength": descriptionLength
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -220,7 +220,7 @@ export class AsyncHttpStreamRequest {
   }
   
   async GenerateDraft(
-      outline: types.Outline,
+      outline: types.Outline,targetWordCount: number,funnelStage: string,searchIntent: string,funnelDescription: string,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -231,7 +231,7 @@ export class AsyncHttpStreamRequest {
       return await this.runtime.buildRequest(
         "GenerateDraft",
         {
-          "outline": outline
+          "outline": outline,"targetWordCount": targetWordCount,"funnelStage": funnelStage,"searchIntent": searchIntent,"funnelDescription": funnelDescription
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -270,7 +270,7 @@ export class AsyncHttpStreamRequest {
   }
   
   async PolishContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,readabilityTarget: string,
       __baml_options__?: BamlCallOptions
   ): Promise<HTTPRequest> {
     try {
@@ -281,7 +281,7 @@ export class AsyncHttpStreamRequest {
       return await this.runtime.buildRequest(
         "PolishContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"readabilityTarget": readabilityTarget
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

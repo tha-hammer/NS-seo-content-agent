@@ -92,7 +92,7 @@ export class BamlAsyncClient {
 
   
   async ExpandDraft(
-      draft: types.Draft,
+      draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
   ): Promise<types.Expanded> {
     try {
@@ -106,7 +106,7 @@ export class BamlAsyncClient {
       // Check if onTick is provided - route through streaming if so
       if (options.onTick) {
         const stream = this.stream.ExpandDraft(
-          draft,
+          draft,currentLength,targetLength,currentWordCount,targetWordCount,
           __baml_options__
         );
         
@@ -121,7 +121,7 @@ export class BamlAsyncClient {
       const raw = await this.runtime.callFunction(
         "ExpandDraft",
         {
-          "draft": draft
+          "draft": draft,"currentLength": currentLength,"targetLength": targetLength,"currentWordCount": currentWordCount,"targetWordCount": targetWordCount
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),
@@ -137,7 +137,7 @@ export class BamlAsyncClient {
   }
   
   async FinalizeContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,titleLength: number,descriptionLength: number,
       __baml_options__?: BamlCallOptions
   ): Promise<types.Final> {
     try {
@@ -151,7 +151,7 @@ export class BamlAsyncClient {
       // Check if onTick is provided - route through streaming if so
       if (options.onTick) {
         const stream = this.stream.FinalizeContent(
-          expanded,
+          expanded,currentWordCount,titleLength,descriptionLength,
           __baml_options__
         );
         
@@ -166,7 +166,7 @@ export class BamlAsyncClient {
       const raw = await this.runtime.callFunction(
         "FinalizeContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"titleLength": titleLength,"descriptionLength": descriptionLength
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),
@@ -182,7 +182,7 @@ export class BamlAsyncClient {
   }
   
   async GenerateDraft(
-      outline: types.Outline,
+      outline: types.Outline,targetWordCount: number,funnelStage: string,searchIntent: string,funnelDescription: string,
       __baml_options__?: BamlCallOptions
   ): Promise<types.Draft> {
     try {
@@ -196,7 +196,7 @@ export class BamlAsyncClient {
       // Check if onTick is provided - route through streaming if so
       if (options.onTick) {
         const stream = this.stream.GenerateDraft(
-          outline,
+          outline,targetWordCount,funnelStage,searchIntent,funnelDescription,
           __baml_options__
         );
         
@@ -211,7 +211,7 @@ export class BamlAsyncClient {
       const raw = await this.runtime.callFunction(
         "GenerateDraft",
         {
-          "outline": outline
+          "outline": outline,"targetWordCount": targetWordCount,"funnelStage": funnelStage,"searchIntent": searchIntent,"funnelDescription": funnelDescription
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),
@@ -272,7 +272,7 @@ export class BamlAsyncClient {
   }
   
   async PolishContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,readabilityTarget: string,
       __baml_options__?: BamlCallOptions
   ): Promise<types.Expanded> {
     try {
@@ -286,7 +286,7 @@ export class BamlAsyncClient {
       // Check if onTick is provided - route through streaming if so
       if (options.onTick) {
         const stream = this.stream.PolishContent(
-          expanded,
+          expanded,currentWordCount,readabilityTarget,
           __baml_options__
         );
         
@@ -301,7 +301,7 @@ export class BamlAsyncClient {
       const raw = await this.runtime.callFunction(
         "PolishContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"readabilityTarget": readabilityTarget
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),
@@ -331,7 +331,7 @@ class BamlStreamClient {
 
   
   ExpandDraft(
-      draft: types.Draft,
+      draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
   ): BamlStream<partial_types.Expanded, types.Expanded> {
     try {
@@ -370,7 +370,7 @@ class BamlStreamClient {
       const raw = this.runtime.streamFunction(
         "ExpandDraft",
         {
-          "draft": draft
+          "draft": draft,"currentLength": currentLength,"targetLength": targetLength,"currentWordCount": currentWordCount,"targetWordCount": targetWordCount
         },
         undefined,
         this.ctxManager.cloneContext(),
@@ -394,7 +394,7 @@ class BamlStreamClient {
   }
   
   FinalizeContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,titleLength: number,descriptionLength: number,
       __baml_options__?: BamlCallOptions
   ): BamlStream<partial_types.Final, types.Final> {
     try {
@@ -433,7 +433,7 @@ class BamlStreamClient {
       const raw = this.runtime.streamFunction(
         "FinalizeContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"titleLength": titleLength,"descriptionLength": descriptionLength
         },
         undefined,
         this.ctxManager.cloneContext(),
@@ -457,7 +457,7 @@ class BamlStreamClient {
   }
   
   GenerateDraft(
-      outline: types.Outline,
+      outline: types.Outline,targetWordCount: number,funnelStage: string,searchIntent: string,funnelDescription: string,
       __baml_options__?: BamlCallOptions
   ): BamlStream<partial_types.Draft, types.Draft> {
     try {
@@ -496,7 +496,7 @@ class BamlStreamClient {
       const raw = this.runtime.streamFunction(
         "GenerateDraft",
         {
-          "outline": outline
+          "outline": outline,"targetWordCount": targetWordCount,"funnelStage": funnelStage,"searchIntent": searchIntent,"funnelDescription": funnelDescription
         },
         undefined,
         this.ctxManager.cloneContext(),
@@ -583,7 +583,7 @@ class BamlStreamClient {
   }
   
   PolishContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,readabilityTarget: string,
       __baml_options__?: BamlCallOptions
   ): BamlStream<partial_types.Expanded, types.Expanded> {
     try {
@@ -622,7 +622,7 @@ class BamlStreamClient {
       const raw = this.runtime.streamFunction(
         "PolishContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"readabilityTarget": readabilityTarget
         },
         undefined,
         this.ctxManager.cloneContext(),

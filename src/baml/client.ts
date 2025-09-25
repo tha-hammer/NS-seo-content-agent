@@ -1,6 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import type { Outline, Draft, Expanded, Final } from '../schemas';
+import { b } from '../../baml_client';
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -17,40 +18,128 @@ export class BAMLClient {
   }
 
   async generateOutline(topic: string, cluster: string): Promise<Outline> {
-    const prompt = `You are the Outline Agent, specialized in creating comprehensive, SEO-optimized outlines for RV and recreational vehicle content.
+    const prompt = `You are the Outline Agent, specialized in creating comprehensive, SEO-optimized outlines for RV (recreational vehicle) content.
+
+Goal
+
+Produce a JSON object matching the exact Outline schema below—no extra keys, no commentary, no markdown—tailored to the given ${topic} and ${cluster}. Optimize for search intent, funnel stage, and user psychology using the Theory of Planned Behavior (TPB).
+
+Inputs
+
+topic: ${topic}
+
+cluster: ${cluster}
+
+(Optional hints if provided in the user’s request: funnel stage, intent, tpb)
+
+Allowed taxonomies (normalize if hints differ)
+
+funnel: one of "TOF" | "MOF" | "BOF"
+
+intent: one of "informational" | "comparative" | "transactional"
+
+tpb: one of "attitude" | "norm" | "perceived_control"
+
+Auto-classification heuristics (if not explicitly provided)
+
+If topic includes “what is”, “how to”, “guide”, “beginner” → funnel="TOF", intent="informational".
+
+If topic includes “best”, “vs”, “compare”, “reviews” → funnel="MOF", intent="comparative".
+
+If topic includes “price”, “dealer”, “for sale”, “financing”, “near me” → funnel="BOF", intent="transactional".
+
+RV domain guidance
+
+Use precise RV terminology (e.g., Class A/B/C, travel trailer, fifth-wheel, GVWR/GCWR, tow rating, floorplans, hookups, boondocking, depreciation, storage, insurance, warranty, financing). Prefer U.S. English.
+
+Style & structure rules
+
+Minimum 3 H2 sections; each H2 has 2–5 keypoints.
+
+Optional H3s under an H2 are allowed (0–5). If none, return an empty array [].
+
+Avoid generic headers like “Introduction” or “Conclusion.” Make H2s specific and benefit-driven.
+
+Bake TPB into sections:
+
+attitude: benefits/drawbacks, outcomes, experiences.
+
+norm: family/community acceptance, campground culture, peer examples.
+
+perceived_control: step-by-steps, checklists, costs/time/tools required.
+
+FAQs: 3–6 concise, practical Q&As. Keep answers ≤ ~60 words. If you add an answer outline, put it in a_outline; otherwise set a_outline to null.
+
+SEO rules
+
+title: Title Case, ≤ 70 characters, include a clear benefit or primary keyword.
+
+slug: kebab-case, lowercase, ≤ 60 characters, alphanumeric + hyphens only.
+
+metadata.primaryKeyword: must include “rv” or a close synonym (e.g., “motorhome”, “travel trailer”) relevant to the topic.
+
+metadata.secondaryKeywords: 6–12 unique terms mixing head & long-tail (questions welcome). No duplicates; avoid brand names unless central to the topic.
+
+metadata.wordcountTarget: 900–1,800 for TOF/MOF; 1,100–2,200 for BOF.
+
+metadata.readingTime: compute as ceil(wordcountTarget / 200) (minutes).
+
+metadata.difficulty: one of "Beginner" | "Intermediate" | "Advanced".
+
+{
+  "outline": {
+    "title": string,
+    "slug": string,
+    "cluster": string,You are the Polish Agent, specialized in refining expanded RV content for maximum clarity, scannability, and user engagement while ensuring comprehensive coverage of user questions and inclusive language.
 
 ## Your Task
-Create a structured H1-H3 outline that aligns with search intent, funnel stage, and user psychology (TPB - Theory of Planned Behavior).
+Polish and refine expanded content to eliminate clarity issues, improve scannability, remove repetition, ensure all People Also Ask (PAA) questions are answered, use inclusive language, tighten headings, and verify content quality.
+    "tpb": "attitude" | "norm" | "perceived_control",
+    "targetReader": "RV enthusiasts and potential buyers",
+    "headings": [
+      {
+        "h2": string,
+        "keypoints": [string, ...], 
+        "h3": [string, ...] 
+      }
+    ],
+    "faqs": [
+      { "q": string, "a": string, "a_outline": string | null }
+    ],
+    "metadata": {
+      "primaryKeyword": string,
+      "secondaryKeywords": [string, ...],
+      "wordcountTarget": number,
+      "readingTime": number,
+      "difficulty": "Beginner" | "Intermediate" | "Advanced"
+    }
+  }
+}
+Quality checklist (perform silently before returning JSON)
 
-## Content Strategy Guidelines
+Taxonomy normalized exactly to allowed enums (case and underscores match).
 
-### Funnel Stage Classification:
-- **TOF (Top of Funnel)**: Educational, awareness content (how-to, what-is, beginner guides)
-- **MOF (Middle of Funnel)**: Comparative, evaluation content (best-of lists, vs comparisons, buying guides)
-- **BOF (Bottom of Funnel)**: Decision, action content (specific product reviews, local dealers, financing)
+H2 count ≥ 3, each with ≥ 2 keypoints; h3 present as [] if unused.
 
-### Search Intent Mapping:
-- **informational**: Learning, understanding (how-to, guides, explanations)
-- **comparative**: Comparing options (best-of, vs, reviews, comparisons)
-- **transactional**: Ready to act (buy, contact, sign up, download)
+No filler headers; each H2 advances the search task and aligns with the chosen funnel, intent, and tpb.
 
-### TPB Classification:
-- **attitude**: Beliefs about RV lifestyle (benefits, drawbacks, experiences)
-- **norm**: Social influences (family acceptance, community, peer pressure)
-- **perceived-control**: Confidence in ability (skills, resources, knowledge needed)
+TPB cues present in keypoints/H3s (e.g., steps/tools for control, social proof for norm).
 
-## Structure Requirements
-1. **Minimum 3 H2 sections** with logical flow
-2. **Each H2 must have 2+ key points** to cover
-3. **Optional H3 subsections** for complex topics
-4. **3+ FAQ entries** answering real user questions
-5. **Metadata** with keywords and SEO details
+Slug is valid kebab-case; title ≤ 70 chars; readingTime = ceil(wordcount/200).
 
-Create an outline for: "${topic}"
-Cluster context: ${cluster}
-Target audience: RV enthusiasts and potential buyers
+Metadata includes strong, non-duplicate secondary keywords relevant to the topic.
 
-Return a JSON object that matches the Outline schema exactly.`;
+Return JSON only. No trailing commas, no extra fields, no markdown.
+
+Task
+
+Create the outline for:
+
+topic: ${topic}
+
+cluster: ${cluster}
+
+Return the JSON object only.`;
 
     const { object } = await generateObject({
       model: openai('gpt-4o-mini'),
@@ -110,361 +199,61 @@ Return a JSON object that matches the Outline schema exactly.`;
   }
 
   async generateDraft(outline: Outline): Promise<Draft> {
-    const prompt = `You are the Draft Agent, specialized in creating concise, well-cited initial draft content from structured outlines for RV and recreational vehicle topics.
+    // Pre-compute dynamic values from outline
+    const targetWordCount = outline.metadata?.wordcountTarget
+      ? Math.floor(outline.metadata.wordcountTarget * 0.6)
+      : 1200;
 
-## Your Task
-Write concise, source-cited paragraphs per section based on the provided outline. Lead each section with a 40-60 word direct answer for featured snippets. Add footnote-style citation markers for key claims.
+    const funnelStage = outline.funnel || 'Unknown';
+    const searchIntent = outline.intent || 'informational';
 
-Create a draft for this outline:
-${JSON.stringify(outline, null, 2)}
+    // Get funnel description
+    const getFunnelDescription = (funnel: string): string => {
+      switch (funnel) {
+        case 'TOF': return 'Educational, awareness content';
+        case 'MOF': return 'Comparative, evaluation content';
+        case 'BOF': return 'Decision, action content';
+        default: return 'General audience content';
+      }
+    };
 
-Return a JSON object that matches the Draft schema exactly.`;
+    const funnelDescription = getFunnelDescription(funnelStage);
 
-    const { object } = await generateObject({
-      model: openai('gpt-4o-mini'),
-      prompt,
-      schema: {
-        type: 'object',
-        properties: {
-          frontmatter: {
-            type: 'object',
-            properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
-              slug: { type: 'string' },
-              date: { type: 'string' },
-              author: { type: 'string' },
-              tags: { type: 'array', items: { type: 'string' } },
-              category: { type: 'string' },
-              funnel: { type: 'string', enum: ['TOF', 'MOF', 'BOF'] },
-              intent: { type: 'string', enum: ['informational', 'comparative', 'transactional'] },
-              primaryKeyword: { type: 'string' },
-              secondaryKeywords: { type: 'array', items: { type: 'string' } },
-              wordcount: { type: 'number' },
-              readingTime: { type: 'number' },
-              schema: { type: 'array', items: { type: 'object' } }
-            },
-            required: ['title', 'description', 'slug', 'date', 'author', 'tags', 'category', 'funnel', 'intent', 'primaryKeyword', 'secondaryKeywords']
-          },
-          content: { type: 'string' },
-          markdownContent: { type: 'string' },
-          faqBlocks: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                question: { type: 'string' },
-                answer: { type: 'string' }
-              },
-              required: ['question', 'answer']
-            }
-          },
-          howtoBlocks: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                title: { type: 'string' },
-                steps: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      step: { type: 'number' },
-                      description: { type: 'string' },
-                      text: { type: 'string' }
-                    },
-                    required: ['step', 'description', 'text']
-                  }
-                }
-              },
-              required: ['title', 'steps']
-            }
-          }
-        },
-        required: ['frontmatter', 'content']
-      },
-      temperature: 0.1,
-    });
-
-    return object as Draft;
+    // Call BAML function with computed parameters
+    return await b.GenerateDraft(outline, targetWordCount, funnelStage, searchIntent, funnelDescription);
   }
 
   async expandDraft(draft: Draft): Promise<Expanded> {
-    const prompt = `You are the Expand Agent, specialized in taking concise initial drafts and expanding them with comprehensive content, tables, examples, checklists, image placeholders, and E-E-A-T elements for RV and recreational vehicle topics.
+    // Pre-compute dynamic values from draft content
+    const currentLength = (draft.markdownContent || draft.content || '').length;
+    const targetLength = currentLength * 3;
+    const currentWordCount = currentLength ? Math.floor(currentLength / 5) : 0; // ~5 chars per word
+    const targetWordCount = currentWordCount * 3;
 
-Expand this draft:
-${JSON.stringify(draft, null, 2)}
-
-Return a JSON object that matches the Expanded schema exactly.`;
-
-    const { object } = await generateObject({
-      model: openai('gpt-4o'),
-      prompt,
-      schema: {
-        type: 'object',
-        properties: {
-          frontmatter: {
-            type: 'object',
-            properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
-              slug: { type: 'string' },
-              date: { type: 'string' },
-              author: { type: 'string' },
-              tags: { type: 'array', items: { type: 'string' } },
-              category: { type: 'string' },
-              funnel: { type: 'string', enum: ['TOF', 'MOF', 'BOF'] },
-              intent: { type: 'string', enum: ['informational', 'comparative', 'transactional'] },
-              primaryKeyword: { type: 'string' },
-              secondaryKeywords: { type: 'array', items: { type: 'string' } },
-              wordcount: { type: 'number' },
-              readingTime: { type: 'number' },
-              schema: { type: 'array', items: { type: 'object' } }
-            },
-            required: ['title', 'description', 'slug', 'date', 'author', 'tags', 'category', 'funnel', 'intent', 'primaryKeyword', 'secondaryKeywords']
-          },
-          content: { type: 'string' },
-          markdownContent: { type: 'string' },
-          evidence: {
-            type: 'object',
-            properties: {
-              claims: { type: 'array', items: { type: 'object' } },
-              citations: { type: 'array', items: { type: 'object' } },
-              expertQuotes: { type: 'array', items: { type: 'object' } }
-            },
-            required: ['claims', 'citations', 'expertQuotes']
-          },
-          imagePlaceholders: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                altText: { type: 'string' },
-                position: { type: 'string' },
-                description: { type: 'string' }
-              },
-              required: ['altText', 'position', 'description']
-            }
-          },
-          eatSignals: {
-            type: 'object',
-            properties: {
-              authorBio: { type: 'string' },
-              reviewer: { type: 'string' },
-              factChecked: { type: 'boolean' },
-              reviewDate: { type: 'string' }
-            },
-            required: ['authorBio', 'factChecked', 'reviewDate']
-          },
-          qualityMetrics: {
-            type: 'object',
-            properties: {
-              readabilityGrade: { type: 'number' },
-              fleschKincaidScore: { type: 'number' },
-              averageSentenceLength: { type: 'number' },
-              passiveVoicePercent: { type: 'number' },
-              keywordDensity: { type: 'object' },
-              brandVoiceAlignment: { type: 'object' },
-              toneAlignment: { type: 'object' }
-            }
-          }
-        },
-        required: ['frontmatter', 'content', 'evidence', 'imagePlaceholders', 'eatSignals']
-      },
-      temperature: 0.1,
-    });
-
-    return object as Expanded;
+    // Call BAML function with computed parameters
+    return await b.ExpandDraft(draft, currentLength, targetLength, currentWordCount, targetWordCount);
   }
 
   async polishContent(expanded: Expanded): Promise<Expanded> {
-    const prompt = `You are the Polish Agent, specialized in refining expanded RV content for maximum clarity, scannability, and user engagement while ensuring comprehensive coverage of user questions and inclusive language.
+    // Pre-compute dynamic values from expanded content
+    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
 
-## Your Task
-Polish and refine expanded content to eliminate clarity issues, improve scannability, remove repetition, ensure all People Also Ask (PAA) questions are answered, use inclusive language, tighten headings, and verify content quality.
+    // Determine readability target based on content complexity
+    const readabilityTarget = expanded.frontmatter?.difficulty === 'Advanced'
+      ? '10th-12th grade'
+      : '8th-10th grade';
 
-Polish this expanded content:
-${JSON.stringify(expanded, null, 2)}
-
-Return a JSON object that matches the Expanded schema exactly.`;
-
-    const { object } = await generateObject({
-      model: openai('gpt-4o'),
-      prompt,
-      schema: {
-        type: 'object',
-        properties: {
-          frontmatter: {
-            type: 'object',
-            properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
-              slug: { type: 'string' },
-              date: { type: 'string' },
-              author: { type: 'string' },
-              tags: { type: 'array', items: { type: 'string' } },
-              category: { type: 'string' },
-              funnel: { type: 'string', enum: ['TOF', 'MOF', 'BOF'] },
-              intent: { type: 'string', enum: ['informational', 'comparative', 'transactional'] },
-              primaryKeyword: { type: 'string' },
-              secondaryKeywords: { type: 'array', items: { type: 'string' } },
-              wordcount: { type: 'number' },
-              readingTime: { type: 'number' },
-              schema: { type: 'array', items: { type: 'object' } }
-            },
-            required: ['title', 'description', 'slug', 'date', 'author', 'tags', 'category', 'funnel', 'intent', 'primaryKeyword', 'secondaryKeywords']
-          },
-          content: { type: 'string' },
-          markdownContent: { type: 'string' },
-          evidence: {
-            type: 'object',
-            properties: {
-              claims: { type: 'array', items: { type: 'object' } },
-              citations: { type: 'array', items: { type: 'object' } },
-              expertQuotes: { type: 'array', items: { type: 'object' } }
-            },
-            required: ['claims', 'citations', 'expertQuotes']
-          },
-          imagePlaceholders: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                altText: { type: 'string' },
-                position: { type: 'string' },
-                description: { type: 'string' }
-              },
-              required: ['altText', 'position', 'description']
-            }
-          },
-          eatSignals: {
-            type: 'object',
-            properties: {
-              authorBio: { type: 'string' },
-              reviewer: { type: 'string' },
-              factChecked: { type: 'boolean' },
-              reviewDate: { type: 'string' }
-            },
-            required: ['authorBio', 'factChecked', 'reviewDate']
-          },
-          qualityMetrics: {
-            type: 'object',
-            properties: {
-              readabilityGrade: { type: 'number' },
-              fleschKincaidScore: { type: 'number' },
-              averageSentenceLength: { type: 'number' },
-              passiveVoicePercent: { type: 'number' },
-              keywordDensity: { type: 'object' },
-              brandVoiceAlignment: { type: 'object' },
-              toneAlignment: { type: 'object' }
-            }
-          }
-        },
-        required: ['frontmatter', 'content', 'evidence', 'imagePlaceholders', 'eatSignals']
-      },
-      temperature: 0.1,
-    });
-
-    return object as Expanded;
+    // Call BAML function with computed parameters
+    return await b.PolishContent(expanded, currentWordCount, readabilityTarget);
   }
 
   async finalizeContent(expanded: Expanded): Promise<Final> {
-    const prompt = `You are the Finalize Agent, responsible for the final SEO optimization and preparation of content for publication.
+    // Pre-compute dynamic values for SEO optimization
+    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
+    const titleLength = expanded.frontmatter?.title?.length || 0;
+    const descriptionLength = expanded.frontmatter?.description?.length || 0;
 
-Finalize this content:
-${JSON.stringify(expanded, null, 2)}
-
-Return a JSON object that matches the Final schema exactly.`;
-
-    const { object } = await generateObject({
-      model: openai('gpt-4o'),
-      prompt,
-      schema: {
-        type: 'object',
-        properties: {
-          frontmatter: {
-            type: 'object',
-            properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
-              slug: { type: 'string' },
-              date: { type: 'string' },
-              author: { type: 'string' },
-              tags: { type: 'array', items: { type: 'string' } },
-              category: { type: 'string' },
-              funnel: { type: 'string', enum: ['TOF', 'MOF', 'BOF'] },
-              intent: { type: 'string', enum: ['informational', 'comparative', 'transactional'] },
-              primaryKeyword: { type: 'string' },
-              secondaryKeywords: { type: 'array', items: { type: 'string' } },
-              wordcount: { type: 'number' },
-              readingTime: { type: 'number' },
-              schema: { type: 'array', items: { type: 'object' } }
-            },
-            required: ['title', 'description', 'slug', 'date', 'author', 'tags', 'category', 'funnel', 'intent', 'primaryKeyword', 'secondaryKeywords']
-          },
-          content: { type: 'string' },
-          markdownContent: { type: 'string' },
-          evidence: {
-            type: 'object',
-            properties: {
-              claims: { type: 'array', items: { type: 'object' } },
-              citations: { type: 'array', items: { type: 'object' } },
-              expertQuotes: { type: 'array', items: { type: 'object' } }
-            },
-            required: ['claims', 'citations', 'expertQuotes']
-          },
-          imagePlaceholders: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                altText: { type: 'string' },
-                position: { type: 'string' },
-                description: { type: 'string' }
-              },
-              required: ['altText', 'position', 'description']
-            }
-          },
-          eatSignals: {
-            type: 'object',
-            properties: {
-              authorBio: { type: 'string' },
-              reviewer: { type: 'string' },
-              factChecked: { type: 'boolean' },
-              reviewDate: { type: 'string' }
-            },
-            required: ['authorBio', 'factChecked', 'reviewDate']
-          },
-          qualityMetrics: {
-            type: 'object',
-            properties: {
-              readabilityGrade: { type: 'number' },
-              fleschKincaidScore: { type: 'number' },
-              averageSentenceLength: { type: 'number' },
-              passiveVoicePercent: { type: 'number' },
-              keywordDensity: { type: 'object' },
-              brandVoiceAlignment: { type: 'object' },
-              toneAlignment: { type: 'object' }
-            }
-          },
-          seoOptimizations: {
-            type: 'object',
-            properties: {
-              titleOptimized: { type: 'boolean' },
-              metaDescriptionOptimized: { type: 'boolean' },
-              schemaMarkupGenerated: { type: 'boolean' },
-              ctaIncluded: { type: 'boolean' },
-              keywordDensityOptimized: { type: 'boolean' }
-            },
-            required: ['titleOptimized', 'metaDescriptionOptimized', 'schemaMarkupGenerated', 'ctaIncluded', 'keywordDensityOptimized']
-          }
-        },
-        required: ['frontmatter', 'content', 'evidence', 'imagePlaceholders', 'eatSignals', 'qualityMetrics', 'seoOptimizations']
-      },
-      temperature: 0.1,
-    });
-
-    return object as Final;
+    // Call BAML function with computed parameters
+    return await b.FinalizeContent(expanded, currentWordCount, titleLength, descriptionLength);
   }
 }

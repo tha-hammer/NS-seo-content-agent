@@ -94,7 +94,7 @@ export class BamlSyncClient {
 
   
   ExpandDraft(
-      draft: types.Draft,
+      draft: types.Draft,currentLength: number,targetLength: number,currentWordCount: number,targetWordCount: number,
       __baml_options__?: BamlCallOptions
   ): types.Expanded {
     try {
@@ -118,7 +118,7 @@ export class BamlSyncClient {
       const raw = this.runtime.callFunctionSync(
         "ExpandDraft",
         {
-          "draft": draft
+          "draft": draft,"currentLength": currentLength,"targetLength": targetLength,"currentWordCount": currentWordCount,"targetWordCount": targetWordCount
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),
@@ -134,7 +134,7 @@ export class BamlSyncClient {
   }
   
   FinalizeContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,titleLength: number,descriptionLength: number,
       __baml_options__?: BamlCallOptions
   ): types.Final {
     try {
@@ -158,7 +158,7 @@ export class BamlSyncClient {
       const raw = this.runtime.callFunctionSync(
         "FinalizeContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"titleLength": titleLength,"descriptionLength": descriptionLength
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),
@@ -174,7 +174,7 @@ export class BamlSyncClient {
   }
   
   GenerateDraft(
-      outline: types.Outline,
+      outline: types.Outline,targetWordCount: number,funnelStage: string,searchIntent: string,funnelDescription: string,
       __baml_options__?: BamlCallOptions
   ): types.Draft {
     try {
@@ -198,7 +198,7 @@ export class BamlSyncClient {
       const raw = this.runtime.callFunctionSync(
         "GenerateDraft",
         {
-          "outline": outline
+          "outline": outline,"targetWordCount": targetWordCount,"funnelStage": funnelStage,"searchIntent": searchIntent,"funnelDescription": funnelDescription
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),
@@ -254,7 +254,7 @@ export class BamlSyncClient {
   }
   
   PolishContent(
-      expanded: types.Expanded,
+      expanded: types.Expanded,currentWordCount: number,readabilityTarget: string,
       __baml_options__?: BamlCallOptions
   ): types.Expanded {
     try {
@@ -278,7 +278,7 @@ export class BamlSyncClient {
       const raw = this.runtime.callFunctionSync(
         "PolishContent",
         {
-          "expanded": expanded
+          "expanded": expanded,"currentWordCount": currentWordCount,"readabilityTarget": readabilityTarget
         },
         this.ctxManager.cloneContext(),
         options.tb?.__tb(),

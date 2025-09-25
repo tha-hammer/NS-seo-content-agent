@@ -1,5 +1,25 @@
-import { RunStateSchema, type RunState, type Outline, type Draft, type Expanded, type Final, type Published } from '@/schemas';
-import { b } from '../baml_client';
+import { type Published } from '@/schemas';
+import { b, type Outline, type Draft, type Expanded, type Final } from '../baml_client';
+
+// Define RunState type using BAML types instead of Zod
+export interface RunState {
+  id: string;
+  topic: string;
+  bucket: 'daily' | 'weekly' | 'monthly';
+  currentStage: 'outline' | 'draft' | 'expand' | 'polish' | 'finalize' | 'link' | 'publish' | 'complete';
+  outline?: Outline;
+  draft?: Draft;
+  expanded?: Expanded;
+  final?: Final;
+  published?: Published;
+  createdAt: string;
+  updatedAt: string;
+  errorHistory: Array<{
+    stage: string;
+    message: string;
+    timestamp: string;
+  }>;
+}
 import { DraftAgent } from '@/agents/DraftAgent';
 import { ExpandAgent } from '@/agents/ExpandAgent';
 import { PolishAgent } from '@/agents/PolishAgent';
@@ -146,7 +166,7 @@ export class Pipeline {
 
       // Stage 6: Content Publishing
       this.progressFeedback.startStage('publish', 'Publishing to markdown files and generating backups');
-      const publishResult = await PublisherAgent.publishContent(runState.final!);
+      const publishResult = await PublisherAgent.publishContent(runState.final!, runState.id);
       if (!publishResult.success) {
         this.progressFeedback.failStage('publish', publishResult.error || 'Content publishing failed');
         return await this.handleStageError(runState, 'publish', publishResult.error || 'Content publishing failed');
@@ -305,7 +325,7 @@ export class Pipeline {
       }
 
       if (stage === 'publish') {
-        const publishResult = await PublisherAgent.publishContent(runState.final!);
+        const publishResult = await PublisherAgent.publishContent(runState.final!, runState.id);
         if (!publishResult.success) {
           return await this.handleStageError(runState, 'publish', publishResult.error || 'Content publishing failed');
         }
@@ -353,18 +373,10 @@ export class Pipeline {
       const repairedJson = repairJson(stateData);
       const stateObj = JSON.parse(repairedJson);
 
-      // Validate state against schema
-      const validation = RunStateSchema.safeParse(stateObj);
-      if (!validation.success) {
-        return {
-          success: false,
-          error: `Invalid run state: ${validation.error.message}`
-        };
-      }
-
+      // Return state object directly since BAML handles validation
       return {
         success: true,
-        data: validation.data
+        data: stateObj as RunState
       };
     } catch (error) {
       return {

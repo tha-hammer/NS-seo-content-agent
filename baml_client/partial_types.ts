@@ -65,11 +65,14 @@ export namespace partial_types {
     }
     export interface FAQ {
       q?: string | null
-      a?: string | null
+      question?: string | null
+      answer?: string | null
       a_outline?: string | null
     }
     export interface FAQBlock {
+      q?: string | null
       question?: string | null
+      a?: string | null
       answer?: string | null
     }
     export interface Final {
@@ -88,19 +91,20 @@ export namespace partial_types {
       slug?: string | null
       date?: string | null
       author?: string | null
-      tags: string[]
+      tags?: string[] | null
       category?: string | null
       funnel?: types.FunnelStage | null
       intent?: types.SearchIntent | null
       primaryKeyword?: string | null
-      secondaryKeywords: string[]
+      secondaryKeywords?: string[] | null
       wordcount?: number | null
       readingTime?: number | null
       schema?: string[] | null
     }
     export interface Heading {
       h2?: string | null
-      keypoints: string[]
+      title?: string | null
+      keypoints?: string[] | null
       h3?: string[] | null
     }
     export interface HowToBlock {
@@ -109,7 +113,9 @@ export namespace partial_types {
     }
     export interface HowToStep {
       step?: number | null
+      position?: number | null
       description?: string | null
+      instruction?: string | null
       text?: string | null
     }
     export interface ImagePlaceholder {
