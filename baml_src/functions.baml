@@ -247,6 +247,25 @@ You want it to come off like a friend explaining something to another friend. St
 
 **⚠️ FAILURE TO MEET WORD COUNT REQUIREMENTS WILL RESULT IN REJECTION ⚠️**
 
+## 🚨 FINAL WORD COUNT VERIFICATION REQUIREMENT 🚨
+
+**BEFORE SUBMITTING YOUR RESPONSE:**
+1. **COUNT YOUR WORDS**: Count ONLY actual words (exclude markdown formatting like **, *, ##, [], etc.)
+2. **VERIFY TARGET**: Content must have {{ targetWordCount }}+ ACTUAL WORDS (not including markdown)
+3. **WORD COUNTING METHOD**: Count only the readable text, not markdown symbols or formatting
+4. **DOUBLE-CHECK**: If under {{ targetWordCount }} words, ADD MORE CONTENT
+5. **EXPAND SECTIONS**: Add more detailed explanations, examples, and context
+6. **QUALITY ASSURANCE**: Every H2 section should have 300+ words minimum
+
+**WORD COUNT VALIDATION CHECKLIST:**
+- ✅ Content has {{ targetWordCount }}+ ACTUAL WORDS (excluding markdown formatting)
+- ✅ Each H2 section has substantial content (300+ actual words each)
+- ✅ Added comprehensive tables with detailed data
+- ✅ Included real family examples with complete scenarios
+- ✅ Created detailed checklists (8+ items each)
+- ✅ Content is significantly longer than the {{ currentWordCount }}-word input
+- ✅ Word count excludes markdown symbols (**, *, ##, [], etc.)
+
     Expand this draft:
     {{ draft }}
 

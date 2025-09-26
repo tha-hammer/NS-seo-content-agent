@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import type { Outline, Draft, Expanded, Final } from '../schemas';
 import { b } from '../../baml_client';
 import { getConfig } from '../config';
+import { countWords } from '../markdown';
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -224,12 +225,12 @@ Provide authoritative, well-sourced information that would be suitable for creat
   async expandDraft(draft: Draft): Promise<Expanded> {
     // Pre-compute dynamic values from draft content
     const currentLength = (draft.markdownContent || draft.content || '').length;
-    const currentWordCount = currentLength ? Math.floor(currentLength / 5) : 0; // ~5 chars per word
+    const currentWordCount = countWords(draft.markdownContent || draft.content || '');
 
     // Use outline target or calculate based on current content
     const outlineTarget = draft.frontmatter?.wordcountTarget || 1500;
-    const targetWordCount = Math.max(outlineTarget, currentWordCount * 2); // At least 2x growth
-    const targetLength = targetWordCount * 5; // ~5 chars per word
+    const targetWordCount = Math.floor(Math.max(outlineTarget, currentWordCount * 2)); // At least 2x growth
+    const targetLength = Math.floor(targetWordCount * 5); // ~5 chars per word
 
     console.log('DEBUG: Expansion parameters:', {
       currentWordCount,
@@ -243,20 +244,49 @@ Provide authoritative, well-sourced information that would be suitable for creat
     const result = await b.ExpandDraft(draft, currentLength, targetLength, currentWordCount, targetWordCount);
 
     // Validate word count requirement was met
-    const resultWordCount = (result.markdownContent || result.content || '').split(/\s+/).length;
+    const resultWordCount = countWords(result.markdownContent || result.content || '');
     console.log(`DEBUG: Expansion result - Target: ${targetWordCount}, Actual: ${resultWordCount}`);
 
     if (resultWordCount < targetWordCount * 0.8) {
       console.warn(`WARNING: Expansion result (${resultWordCount} words) is below 80% of target (${targetWordCount} words)`);
 
-      // Try one more time with stricter instructions
-      console.log('DEBUG: Attempting expansion retry with stricter requirements...');
-      const retryResult = await b.ExpandDraft(draft, currentLength, targetLength, currentWordCount, targetWordCount * 1.2);
-      const retryWordCount = (retryResult.markdownContent || retryResult.content || '').split(/\s+/).length;
+      // Multiple retry attempts with increasing targets
+      let bestResult = result;
+      let bestWordCount = resultWordCount;
 
-      if (retryWordCount > resultWordCount) {
-        console.log(`DEBUG: Retry successful - improved from ${resultWordCount} to ${retryWordCount} words`);
-        return retryResult;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        console.log(`DEBUG: Attempting expansion retry ${attempt}/3 with stricter requirements...`);
+        const multiplier = 1.2 + (attempt * 0.2); // 1.4, 1.6, 1.8
+        const retryTargetWordCount = Math.floor(targetWordCount * multiplier);
+        const retryTargetLength = Math.floor(targetLength * multiplier);
+
+        try {
+          const retryResult = await b.ExpandDraft(draft, currentLength, retryTargetLength, currentWordCount, retryTargetWordCount);
+          const retryWordCount = countWords(retryResult.markdownContent || retryResult.content || '');
+
+          console.log(`DEBUG: Retry ${attempt} result - Target: ${retryTargetWordCount}, Actual: ${retryWordCount}`);
+
+          if (retryWordCount > bestWordCount) {
+            bestResult = retryResult;
+            bestWordCount = retryWordCount;
+            console.log(`DEBUG: Retry ${attempt} improved word count to ${retryWordCount}`);
+
+            // If we hit 90% of original target, that's good enough
+            if (retryWordCount >= targetWordCount * 0.9) {
+              console.log(`DEBUG: Retry ${attempt} achieved 90% of target, using this result`);
+              break;
+            }
+          }
+        } catch (error) {
+          console.warn(`WARNING: Retry ${attempt} failed:`, error instanceof Error ? error.message : error);
+        }
+      }
+
+      if (bestWordCount > resultWordCount) {
+        console.log(`DEBUG: Best retry result: ${bestWordCount} words (improvement from ${resultWordCount})`);
+        return bestResult;
+      } else {
+        console.warn(`WARNING: All retries failed to improve word count. Using original result with ${resultWordCount} words.`);
       }
     }
 
@@ -265,7 +295,7 @@ Provide authoritative, well-sourced information that would be suitable for creat
 
   async polishContent(expanded: Expanded): Promise<Expanded> {
     // Pre-compute dynamic values from expanded content
-    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
+    const currentWordCount = countWords(expanded.markdownContent || expanded.content || '');
 
     // Determine readability target based on content complexity
     const readabilityTarget = expanded.frontmatter?.difficulty === 'Advanced'
@@ -278,7 +308,7 @@ Provide authoritative, well-sourced information that would be suitable for creat
 
   async finalizeContent(expanded: Expanded): Promise<Final> {
     // Pre-compute dynamic values for SEO optimization
-    const currentWordCount = (expanded.markdownContent || expanded.content || '').split(/\s+/).length;
+    const currentWordCount = countWords(expanded.markdownContent || expanded.content || '');
     const titleLength = expanded.frontmatter?.title?.length || 0;
     const descriptionLength = expanded.frontmatter?.description?.length || 0;
 
