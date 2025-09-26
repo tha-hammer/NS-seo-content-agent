@@ -26,6 +26,7 @@ export interface Config {
     strictStructuredOutputs: boolean;
     linkInjection: boolean;
     qualityGate: boolean;
+    deepResearch: boolean;
   };
   batch: {
     dailyLimit: number;
@@ -56,6 +57,7 @@ function getDefaultConfig(): Omit<Config, 'openai'> {
     strictStructuredOutputs: process.env.ENABLE_STRUCTURED_OUTPUTS !== 'false',
     linkInjection: process.env.ENABLE_LINK_INJECTION !== 'false',
     qualityGate: process.env.ENABLE_QUALITY_GATE !== 'false',
+    deepResearch: process.env.ENABLE_DEEP_RESEARCH === 'true',
   },
   batch: {
     dailyLimit: parseInt(process.env.DAILY_LIMIT || '25'),

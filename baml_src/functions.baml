@@ -56,8 +56,16 @@ Return STRICT JSON matching the provided schema. Include:
 Focus on providing genuine value to RV enthusiasts while optimizing for search discoverability.
 
     Create an outline for: "{{ topic }}"
-    Cluster context: {{ cluster }}
-    Target audience: RV enthusiasts and potential buyers
+
+    COMPREHENSIVE RESEARCH DATA TO USE:
+    {{ cluster }}
+
+    CRITICAL INSTRUCTIONS:
+    - Use ALL the research data above to inform your outline
+    - Extract key facts, statistics, expert opinions, and sources from the research
+    - Map research findings to evidence keys in the outline
+    - Ensure outline reflects the depth and breadth of research provided
+    - Target audience: RV enthusiasts and potential buyers
 
     {{ ctx.output_format }}
   "#
@@ -182,27 +190,35 @@ Position indicators:
 - **Trustworthiness**: Citation quality and source authority
 
 ### Evidence and Citations:
-- Map claims to authoritative sources
-- Include expert quotes with full credentials
-- Reference industry data, manufacturer specs, and professional insights
-- Ensure YMYL content has high-authority backing
+- **CRITICAL**: Extract ALL sources, URLs, and citations from the original research data
+- Map specific factual claims to authoritative sources (RV industry websites, manufacturer data, expert opinions)
+- Include expert quotes with full credentials from the research
+- Reference industry data, manufacturer specifications, and professional insights from research
+- Ensure YMYL content has high-authority backing with proper source attribution
+- **MANDATORY**: Populate the evidence object with:
+  - claims: Array of specific factual statements made in content
+  - citations: Array of source URLs and references from the original research
+  - expertQuotes: Array of quoted expert statements with attribution
 
-## CRITICAL EXPANSION REQUIREMENTS:
+## 🚨🚨🚨 CRITICAL EXPANSION REQUIREMENTS - MANDATORY COMPLIANCE 🚨🚨🚨
 
-🚨 **MANDATORY WORD COUNT EXPANSION** 🚨
+**ABSOLUTE WORD COUNT REQUIREMENT:**
 - CURRENT CONTENT: {{ currentWordCount }} words
 - **REQUIRED TARGET: {{ targetWordCount }} words**
-- **YOU MUST REACH AT LEAST {{ targetWordCount }} WORDS - NO EXCEPTIONS**
+- **YOU MUST REACH EXACTLY {{ targetWordCount }} WORDS OR MORE - FAILURE IS NOT ACCEPTABLE**
+- **IF OUTPUT IS UNDER {{ targetWordCount }} WORDS, IT WILL BE REJECTED**
 
-## Content Structure - ALL REQUIREMENTS MANDATORY:
-1. **🎯 PRIMARY GOAL: Expand from {{ currentWordCount }} words to {{ targetWordCount }} words**
-2. **📝 Character expansion**: Grow from {{ currentLength }} characters to ~{{ targetLength }} characters
-3. **📊 Add 3-4 comparison/data tables** using proper markdown table format with detailed data
-4. **👨‍👩‍👧‍👦 Include 2-3 detailed real-world examples** with specific family scenarios, names, and outcomes
-5. **✅ Insert 3-4 comprehensive actionable checklists** using markdown checkbox format
-6. **🖼️ Place 3-5 strategic image placeholders** with descriptive alt text and positioning
-7. **📚 Map all claims to authoritative sources** in the evidence object
-8. **🏆 Add comprehensive E-E-A-T signals** (author bio, reviewer, fact-check status, credentials)
+**EXPANSION VERIFICATION CHECKLIST - ALL MANDATORY:**
+1. 🎯 **PRIMARY GOAL**: Transform {{ currentWordCount }} words into {{ targetWordCount }}+ words
+2. 📝 **Character Target**: Expand from {{ currentLength }} to {{ targetLength }}+ characters
+3. 📊 **Tables**: Add 4-6 comprehensive comparison/data tables with 5+ rows each
+4. 👨‍👩‍👧‍👦 **Examples**: Include 3-4 detailed real-world scenarios with specific names, situations, and outcomes
+5. ✅ **Checklists**: Create 4-5 actionable checklists with 8+ items each
+6. 🖼️ **Images**: Place 5-7 strategic image placeholders with detailed descriptions
+7. 📚 **Evidence**: Map every factual claim to authoritative sources
+8. 🏆 **E-E-A-T**: Include comprehensive expertise signals
+9. 📖 **Content Depth**: Add detailed explanations, background context, and comprehensive coverage
+10. 🔗 **Internal Structure**: Create substantial subsections under each H2 with detailed content
 
 ## Output Requirements:
 Return STRICT JSON matching the ExpandedSchema:
@@ -215,14 +231,21 @@ Return STRICT JSON matching the ExpandedSchema:
 Focus on creating content that establishes clear expertise and provides exceptional value to RV enthusiasts while maintaining strong search optimization.
 You want it to come off like a friend explaining something to another friend. Still from a "we're the experts" type of vibe that still feels friendly. You want to build more trust and make the article flow in a way that isn't just dealing with pure fact.
 
-🔥 **EXPANSION VALIDATION CHECKLIST** 🔥
-Before submitting your response, verify:
-- ✅ Content has grown from {{ currentWordCount }} words to AT LEAST {{ targetWordCount }} words
-- ✅ Added substantial new sections with detailed explanations
-- ✅ Included multiple tables with comprehensive data
-- ✅ Added detailed examples with specific names and scenarios
-- ✅ Created actionable checklists that readers can use immediately
-- ✅ Content is significantly longer and more comprehensive than the input
+🔥🔥🔥 **MANDATORY EXPANSION VALIDATION** 🔥🔥🔥
+
+**BEFORE SUBMITTING - VERIFY EVERY ITEM:**
+- ✅ Word count is {{ targetWordCount }}+ words (NOT {{ currentWordCount }} words)
+- ✅ Added 2000+ characters of new content beyond the input
+- ✅ Included 4-6 comprehensive tables with detailed data rows
+- ✅ Added 3-4 detailed examples with specific family names and complete scenarios
+- ✅ Created 4-5 actionable checklists with 8+ items each
+- ✅ Placed 5-7 strategic image placeholders with descriptive alt text
+- ✅ Expanded every H2 section with substantial new content
+- ✅ Added comprehensive background information and context
+- ✅ Included expert insights and authoritative information
+- ✅ Content is DRAMATICALLY longer and more comprehensive than input
+
+**⚠️ FAILURE TO MEET WORD COUNT REQUIREMENTS WILL RESULT IN REJECTION ⚠️**
 
     Expand this draft:
     {{ draft }}

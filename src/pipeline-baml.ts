@@ -15,6 +15,7 @@ interface PipelineState {
   topic: string;
   cluster: string;
   stage: 'outline' | 'draft' | 'expand' | 'polish' | 'finalize' | 'publish' | 'complete';
+  researchData?: string; // Save expensive research data immediately
   outline?: Outline;
   draft?: Draft;
   expanded?: Expanded;
@@ -60,7 +61,16 @@ export class BAMLPipeline {
     try {
       // Stage 1: Generate Outline
       this.progressFeedback.startStage('outline', 'Creating structured outline with BAML');
-      const outlineResult = await OutlineAgentBAML.generateOutline(topic, cluster);
+
+      // Create function to save research data to state
+      const saveResearch = async (researchData: string) => {
+        state.researchData = researchData;
+        // Save state immediately after research is retrieved
+        await this.savePipelineState(state, outputDir);
+        console.log(`DEBUG: Research data saved to pipeline state (${researchData.length} chars)`);
+      };
+
+      const outlineResult = await OutlineAgentBAML.generateOutline(topic, state.researchData || cluster, saveResearch);
 
       if (!outlineResult.success || !outlineResult.data) {
         state.errors.push(`Outline generation failed: ${outlineResult.error}`);

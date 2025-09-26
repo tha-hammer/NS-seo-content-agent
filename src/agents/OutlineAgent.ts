@@ -81,7 +81,91 @@ export class OutlineAgent {
   }
 
   /**
-   * Perform web research on a topic using OpenAI web search
+   * Perform deep research on a topic using OpenAI o3-deep-research model in background mode
+   */
+  private static async deepResearchTopic(topic: string): Promise<string> {
+    try {
+      console.log(`DEBUG: Starting deep research for topic: ${topic}`);
+
+      // Initiate background deep research job
+      const job = await this.getOpenAIClient().responses.create({
+        model: "o3-deep-research",
+        background: true,
+        tools: [
+          {
+            type: "web_search_preview"
+          }
+        ],
+        input: `Conduct comprehensive deep research on "${topic}" related to RVs, recreational vehicles, camping, and outdoor lifestyle.
+
+Research Focus Areas:
+1. Technical specifications and equipment details
+2. Historical development and industry trends
+3. Best practices from industry experts and experienced RVers
+4. Common issues, solutions, and troubleshooting guides
+5. Safety regulations and compliance requirements
+6. Cost analysis and budgeting considerations
+7. Regional variations and geographic considerations
+8. Latest innovations and emerging technologies
+9. User reviews and real-world performance data
+10. Professional recommendations and expert opinions
+
+Provide authoritative, well-sourced information that would be suitable for creating a comprehensive, expert-level guide. Focus on factual accuracy, practical applicability, and actionable insights for RV enthusiasts.`
+      });
+
+      console.log(`DEBUG: Deep research job initiated with ID: ${job.id}`);
+
+      // Poll for job completion with proper intervals
+      const result = await this.pollDeepResearchJob(job.id);
+
+      console.log(`DEBUG: Deep research completed, content length: ${result.length}`);
+      return result;
+
+    } catch (error) {
+      console.warn(`WARNING: Deep research failed for topic "${topic}":`, error instanceof Error ? error.message : error);
+      // Fallback to regular web search
+      console.log(`DEBUG: Falling back to web search for topic: ${topic}`);
+      return await this.researchTopic(topic);
+    }
+  }
+
+  /**
+   * Poll deep research job until completion
+   */
+  private static async pollDeepResearchJob(jobId: string, maxWaitTime: number = 1500000, pollInterval: number = 15000): Promise<string> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitTime) {
+      try {
+        console.log(`DEBUG: Polling deep research job ${jobId}...`);
+
+        const result = await this.getOpenAIClient().responses.retrieve(jobId);
+
+        if (result.status === 'completed') {
+          console.log(`DEBUG: Deep research job ${jobId} completed successfully`);
+          return result.output_text || '';
+        } else if (result.status === 'failed') {
+          const errorMsg = result.error ? JSON.stringify(result.error, null, 2) : 'Unknown error';
+          throw new Error(`Deep research job failed: ${errorMsg}`);
+        } else if (result.status === 'cancelled') {
+          throw new Error('Deep research job was cancelled');
+        }
+
+        // Job still running, wait before next poll
+        console.log(`DEBUG: Job ${jobId} status: ${result.status}, waiting ${pollInterval}ms...`);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      } catch (error) {
+        console.warn(`WARNING: Error polling deep research job ${jobId}:`, error);
+        throw error;
+      }
+    }
+
+    throw new Error(`Deep research job ${jobId} timed out after ${maxWaitTime}ms`);
+  }
+
+  /**
+   * Perform web research on a topic using OpenAI web search (fallback method)
    */
   private static async researchTopic(topic: string): Promise<string> {
     try {
@@ -113,9 +197,17 @@ export class OutlineAgent {
    */
   static async generateOutline(topic: string, cluster: string = ''): Promise<OutlineResult> {
     try {
-      // Perform web research before generating outline
-      console.log(`DEBUG: Performing research for topic: ${topic}`);
-      const researchData = await this.researchTopic(topic);
+      // Perform research before generating outline (deep research or web search based on config)
+      const config = getConfig();
+      let researchData: string;
+
+      if (config.features.deepResearch) {
+        console.log(`DEBUG: Performing deep research for topic: ${topic}`);
+        researchData = await this.deepResearchTopic(topic);
+      } else {
+        console.log(`DEBUG: Performing web search for topic: ${topic}`);
+        researchData = await this.researchTopic(topic);
+      }
 
       // Use research data as cluster context, fallback to provided cluster if research fails
       const clusterContext = researchData.length > 50 ? researchData : cluster || 'No additional context available';
