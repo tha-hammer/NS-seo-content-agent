@@ -89,44 +89,29 @@ Provide well-sourced information suitable for creating an expert-level RV guide.
   /**
    * Poll deep research job until completion
    */
-  private async pollDeepResearchJob(jobId: string, maxWaitTime: number = 600000, initialPollInterval: number = 10000): Promise<string> {
+  private async pollDeepResearchJob(jobId: string, maxWaitTime: number = 2400000, pollInterval: number = 15000): Promise<string> {
     const startTime = Date.now();
-    let pollInterval = initialPollInterval;
-    let queuedCount = 0;
-    const maxQueuedPolls = 12; // Give up after 2 minutes of being queued
 
     while (Date.now() - startTime < maxWaitTime) {
       try {
         const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-        console.log(`DEBUG: BAML - Polling deep research job ${jobId}... (${elapsedSeconds}s elapsed)`);
+        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+        console.log(`DEBUG: BAML - Polling deep research job ${jobId}... (${elapsedMinutes}m ${elapsedSeconds % 60}s elapsed)`);
 
         const result = await getOpenAIClient().responses.retrieve(jobId);
 
         if (result.status === 'completed') {
-          console.log(`DEBUG: BAML - Deep research job ${jobId} completed successfully after ${elapsedSeconds}s`);
+          console.log(`DEBUG: BAML - Deep research job ${jobId} completed successfully after ${elapsedMinutes}m ${elapsedSeconds % 60}s`);
           return result.output_text || '';
         } else if (result.status === 'failed') {
           const errorMsg = result.error ? JSON.stringify(result.error, null, 2) : 'Unknown error';
           throw new Error(`Deep research job failed: ${errorMsg}`);
         } else if (result.status === 'cancelled') {
           throw new Error('Deep research job was cancelled');
-        } else if (result.status === 'queued') {
-          queuedCount++;
-          console.log(`DEBUG: BAML - Job ${jobId} still queued (${queuedCount}/${maxQueuedPolls})`);
-
-          // If job has been queued too long, give up early
-          if (queuedCount >= maxQueuedPolls) {
-            console.warn(`WARNING: BAML - Job ${jobId} has been queued for too long (${queuedCount} polls), giving up`);
-            throw new Error(`Deep research job stuck in queue after ${queuedCount} polls`);
-          }
-        } else if (result.status === 'running') {
-          console.log(`DEBUG: BAML - Job ${jobId} is running, continuing to poll...`);
-          queuedCount = 0; // Reset queued counter when job starts running
-          // Use longer intervals when job is running
-          pollInterval = Math.min(20000, Math.floor(pollInterval * 1.2));
         }
 
-        // Wait before next poll
+        // Job still running or queued, wait before next poll
+        console.log(`DEBUG: BAML - Job ${jobId} status: ${result.status}, waiting ${pollInterval / 1000}s...`);
         await new Promise(resolve => setTimeout(resolve, pollInterval));
 
       } catch (error) {
@@ -135,8 +120,8 @@ Provide well-sourced information suitable for creating an expert-level RV guide.
       }
     }
 
-    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-    throw new Error(`Deep research job ${jobId} timed out after ${elapsedSeconds}s`);
+    const elapsedMinutes = Math.floor((Date.now() - startTime) / (1000 * 60));
+    throw new Error(`Deep research job ${jobId} timed out after ${elapsedMinutes} minutes`);
   }
 
   /**

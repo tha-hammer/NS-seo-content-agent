@@ -3926,3 +3926,88 @@ Got it! The deep research timeout fixes are now complete with a simple fallback 
 
 The pipeline will continue working reliably even when deep research times out, since it automatically uses the web search fallback that's proven to work consistently.
 
+---
+
+_**User**_
+
+This new pipeline fails far too fast.  Deep research ran for 114 seconds. According to the documentation, deep research can run for "tens of minutes".  Let's let it run until it either fails or suceeds and see how much time it takes.
+
+---
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+You're absolutely right! 114 seconds is way too fast to give up on deep research. Let me revert the aggressive timeout and let it run for the full duration to see how long it actually takes.
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Tool use: **Edit**
+
+Result:
+
+```
+The file /home/mjourdan/Dev/NS-seo-content-agent/src/baml/client.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    88→
+    89→  /**
+    90→   * Poll deep research job until completion
+    91→   */
+    92→  private async pollDeepResearchJob(jobId: string, maxWaitTime: number = 2400000, pollInterval: number = 15000): Promise<string> {
+    93→    const startTime = Date.now();
+    94→
+    95→    while (Date.now() - startTime < maxWaitTime) {
+    96→      try {
+    97→        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    98→        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    99→        console.log(`DEBUG: BAML - Polling deep research job ${jobId}... (${elapsedMinutes}m ${elapsedSeconds % 60}s elapsed)`);
+   100→
+   101→        const result = await getOpenAIClient().responses.retrieve(jobId);
+   102→
+   103→        if (result.status === 'completed') {
+   104→          console.log(`DEBUG: BAML - Deep research job ${jobId} completed successfully after ${elapsedMinutes}m ${elapsedSeconds % 60}s`);
+   105→          return result.output_text || '';
+   106→        } else if (result.status === 'failed') {
+   107→          const errorMsg = result.error ? JSON.stringify(result.error, null, 2) : 'Unknown error';
+   108→          throw new Error(`Deep research job failed: ${errorMsg}`);
+   109→        } else if (result.status === 'cancelled') {
+   110→          throw new Error('Deep research job was cancelled');
+   111→        }
+   112→
+   113→        // Job still running or queued, wait before next poll
+   114→        console.log(`DEBUG: BAML - Job ${jobId} status: ${result.status}, waiting ${pollInterval / 1000}s...`);
+   115→        await new Promise(resolve => setTimeout(resolve, pollInterval));
+   116→
+   117→      } catch (error) {
+   118→        console.warn(`WARNING: BAML - Error polling deep research job ${jobId}:`, error instanceof Error ? error.message : error);
+   119→        throw error;
+   120→      }
+   121→    }
+   122→
+   123→    const elapsedMinutes = Math.floor((Date.now() - startTime) / (1000 * 60));
+   124→    throw new Error(`Deep research job ${jobId} timed out after ${elapsedMinutes} minutes`);
+   125→  }
+   126→
+   127→  /**
+   128→   * Perform web research on a topic using OpenAI web search (fallback method)
+   129→   */
+```
+
+_**Agent (claude-sonnet-4-20250514)**_
+
+Perfect! Now the deep research will:
+
+## Updated Deep Research Timing ✅
+
+### **Patient Polling Strategy**
+- **40-minute timeout**: 2400000ms (40 minutes) to give it proper time
+- **15-second intervals**: Back to reasonable polling frequency
+- **Better time display**: Shows minutes and seconds for long runs
+- **No early exits**: Removed aggressive queue timeout logic
+
+### **What We'll Learn**
+- **Actual completion times**: How long deep research really takes
+- **Success patterns**: Which topics complete vs. timeout
+- **Queue behavior**: How long jobs typically stay queued before running
+
+The system will now patiently wait for deep research to complete and give us real data on how long it actually takes. When it does timeout after 40 minutes, it'll still fall back gracefully to web search.
+
+Let's run a test and see how long deep research actually takes when given proper time!
+
