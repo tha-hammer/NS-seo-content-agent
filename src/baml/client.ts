@@ -50,21 +50,24 @@ export class BAMLClient {
             type: "web_search_preview"
           }
         ],
-        input: `Conduct comprehensive deep research on "${topic}" related to RVs, recreational vehicles, camping, and outdoor lifestyle.
+        input: `Research "${topic}" for RV enthusiasts and potential buyers. Focus on:
 
-Research Focus Areas:
+PRIORITY RESEARCH AREAS:
 1. Technical specifications and equipment details
-2. Historical development and industry trends
-3. Best practices from industry experts and experienced RVers
-4. Common issues, solutions, and troubleshooting guides
-5. Safety regulations and compliance requirements
-6. Cost analysis and budgeting considerations
-7. Regional variations and geographic considerations
-8. Latest innovations and emerging technologies
-9. User reviews and real-world performance data
-10. Professional recommendations and expert opinions
+2. Best practices from industry experts and experienced RVers
+3. Common issues, solutions, and troubleshooting guides
+4. Cost analysis and budgeting considerations
+5. Latest innovations and emerging technologies
+6. User reviews and real-world performance data
 
-Provide authoritative, well-sourced information that would be suitable for creating a comprehensive, expert-level guide. Focus on factual accuracy, practical applicability, and actionable insights for RV enthusiasts.`
+REQUIREMENTS:
+- Limit to 8-10 authoritative sources maximum
+- Focus on factual accuracy and practical applicability
+- Include specific data, statistics, and expert quotes where available
+- Prioritize recent information (last 2-3 years when possible)
+- Keep response comprehensive but concise for faster processing
+
+Provide well-sourced information suitable for creating an expert-level RV guide.`
       });
 
       console.log(`DEBUG: BAML - Deep research job initiated with ID: ${job.id}`);
@@ -77,7 +80,7 @@ Provide authoritative, well-sourced information that would be suitable for creat
 
     } catch (error) {
       console.warn(`WARNING: BAML - Deep research failed for topic "${topic}":`, error instanceof Error ? error.message : error);
-      // Fallback to regular web search
+      // Fallback to regular web search immediately
       console.log(`DEBUG: BAML - Falling back to web search for topic: ${topic}`);
       return await this.researchTopic(topic);
     }
@@ -86,36 +89,54 @@ Provide authoritative, well-sourced information that would be suitable for creat
   /**
    * Poll deep research job until completion
    */
-  private async pollDeepResearchJob(jobId: string, maxWaitTime: number = 1500000, pollInterval: number = 15000): Promise<string> {
+  private async pollDeepResearchJob(jobId: string, maxWaitTime: number = 600000, initialPollInterval: number = 10000): Promise<string> {
     const startTime = Date.now();
+    let pollInterval = initialPollInterval;
+    let queuedCount = 0;
+    const maxQueuedPolls = 12; // Give up after 2 minutes of being queued
 
     while (Date.now() - startTime < maxWaitTime) {
       try {
-        console.log(`DEBUG: BAML - Polling deep research job ${jobId}...`);
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        console.log(`DEBUG: BAML - Polling deep research job ${jobId}... (${elapsedSeconds}s elapsed)`);
 
         const result = await getOpenAIClient().responses.retrieve(jobId);
 
         if (result.status === 'completed') {
-          console.log(`DEBUG: BAML - Deep research job ${jobId} completed successfully`);
+          console.log(`DEBUG: BAML - Deep research job ${jobId} completed successfully after ${elapsedSeconds}s`);
           return result.output_text || '';
         } else if (result.status === 'failed') {
           const errorMsg = result.error ? JSON.stringify(result.error, null, 2) : 'Unknown error';
           throw new Error(`Deep research job failed: ${errorMsg}`);
         } else if (result.status === 'cancelled') {
           throw new Error('Deep research job was cancelled');
+        } else if (result.status === 'queued') {
+          queuedCount++;
+          console.log(`DEBUG: BAML - Job ${jobId} still queued (${queuedCount}/${maxQueuedPolls})`);
+
+          // If job has been queued too long, give up early
+          if (queuedCount >= maxQueuedPolls) {
+            console.warn(`WARNING: BAML - Job ${jobId} has been queued for too long (${queuedCount} polls), giving up`);
+            throw new Error(`Deep research job stuck in queue after ${queuedCount} polls`);
+          }
+        } else if (result.status === 'running') {
+          console.log(`DEBUG: BAML - Job ${jobId} is running, continuing to poll...`);
+          queuedCount = 0; // Reset queued counter when job starts running
+          // Use longer intervals when job is running
+          pollInterval = Math.min(20000, Math.floor(pollInterval * 1.2));
         }
 
-        // Job still running, wait before next poll
-        console.log(`DEBUG: BAML - Job ${jobId} status: ${result.status}, waiting ${pollInterval}ms...`);
+        // Wait before next poll
         await new Promise(resolve => setTimeout(resolve, pollInterval));
 
       } catch (error) {
-        console.warn(`WARNING: BAML - Error polling deep research job ${jobId}:`, error);
+        console.warn(`WARNING: BAML - Error polling deep research job ${jobId}:`, error instanceof Error ? error.message : error);
         throw error;
       }
     }
 
-    throw new Error(`Deep research job ${jobId} timed out after ${maxWaitTime}ms`);
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    throw new Error(`Deep research job ${jobId} timed out after ${elapsedSeconds}s`);
   }
 
   /**
