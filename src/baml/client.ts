@@ -35,9 +35,65 @@ export class BAMLClient {
   }
 
   /**
+   * Load research data from the run directory
+   */
+  private async loadResearchData(runId: string): Promise<string | null> {
+    try {
+      const filepath = `./runs/${runId}/research.md`;
+      const fs = await import('fs/promises');
+      const content = await fs.readFile(filepath, 'utf8');
+
+      // Extract the research data from the saved file (remove header/metadata if present)
+      const separatorIndex = content.indexOf('---\n\n');
+      if (separatorIndex !== -1) {
+        const researchData = content.substring(separatorIndex + 5);
+        console.log(`✅ Research data loaded from: ${filepath} (${researchData.length} chars)`);
+        return researchData;
+      } else {
+        // Fallback: return entire content (handles older format or direct research content)
+        console.log(`✅ Research data loaded (full content): ${filepath} (${content.length} chars)`);
+        return content;
+      }
+    } catch (error) {
+      console.warn(`WARNING: Could not load research data for runId ${runId}:`, error instanceof Error ? error.message : error);
+      return null;
+    }
+  }
+
+  /**
+   * Save research data to the run directory
+   */
+  private async saveResearchData(researchData: string, topic: string, runId?: string): Promise<void> {
+    try {
+      let filepath: string;
+
+      if (runId) {
+        // Save to run directory: ./runs/{runId}/research.md
+        const runDir = `./runs/${runId}`;
+        await import('fs/promises').then(fs => fs.mkdir(runDir, { recursive: true }));
+        filepath = `${runDir}/research.md`;
+      } else {
+        // Fallback to timestamp-based filename in research directory
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `research-${timestamp}-${topic.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 50)}.md`;
+        await import('fs/promises').then(fs => fs.mkdir('./research', { recursive: true }));
+        filepath = `./research/${filename}`;
+      }
+
+      // Save research data with topic header
+      const content = `# Research Data: ${topic}\n\nGenerated: ${new Date().toISOString()}\nLength: ${researchData.length} characters\n\n---\n\n${researchData}`;
+      await import('fs/promises').then(fs => fs.writeFile(filepath, content, 'utf8'));
+
+      console.log(`✅ Research data saved to: ${filepath} (${researchData.length} chars)`);
+    } catch (error) {
+      console.error('❌ Failed to save research data:', error);
+    }
+  }
+
+  /**
    * Perform deep research on a topic using OpenAI o3-deep-research model in background mode
    */
-  private async deepResearchTopic(topic: string): Promise<string> {
+  private async deepResearchTopic(topic: string, runId?: string, saveResearch?: (data: string) => Promise<void>): Promise<string> {
     try {
       console.log(`DEBUG: BAML - Starting deep research for topic: ${topic}`);
 
@@ -76,6 +132,11 @@ Provide well-sourced information suitable for creating an expert-level RV guide.
       const result = await this.pollDeepResearchJob(job.id);
 
       console.log(`DEBUG: BAML - Deep research completed, content length: ${result.length}`);
+
+      // ALWAYS SAVE THE RESEARCH NO MATTER WHAT
+      console.log(`🔥 SAVING RESEARCH DATA TO DISK - NO EXCEPTIONS`);
+      await this.saveResearchData(result, topic, runId);
+
       return result;
 
     } catch (error) {
@@ -152,7 +213,24 @@ Provide well-sourced information suitable for creating an expert-level RV guide.
     }
   }
 
-  async generateOutline(topic: string, cluster: string = '', saveResearch?: (data: string) => Promise<void>): Promise<Outline> {
+  /**
+   * Perform new research for a topic
+   */
+  private async performNewResearch(topic: string, runId?: string, saveResearch?: (data: string) => Promise<void>): Promise<string> {
+    const config = getConfig();
+
+    if (config.features.deepResearch) {
+      console.log(`DEBUG: BAML - Performing deep research for topic: ${topic}`);
+      return await this.deepResearchTopic(topic, runId, saveResearch);
+    } else {
+      console.log(`DEBUG: BAML - Performing web search for topic: ${topic}`);
+      return await this.researchTopic(topic);
+    }
+  }
+
+  async generateOutline(topic: string, cluster: string = '', saveResearch?: (data: string) => Promise<void>, runId?: string): Promise<Outline> {
+    console.log(`DEBUG: BAMLClient.generateOutline received saveResearch callback: ${!!saveResearch}, runId: ${runId}`);
+
     // Check if we already have research data in cluster
     const hasResearchData = cluster && cluster.length > 1000; // Assume cluster with substantial data is research
 
@@ -161,23 +239,33 @@ Provide well-sourced information suitable for creating an expert-level RV guide.
     if (hasResearchData) {
       console.log(`DEBUG: BAML - Using existing research data (${cluster.length} chars)`);
       researchData = cluster;
-    } else {
-      // Perform research before generating outline (deep research or web search based on config)
-      const config = getConfig();
-
-      if (config.features.deepResearch) {
-        console.log(`DEBUG: BAML - Performing deep research for topic: ${topic}`);
-        researchData = await this.deepResearchTopic(topic);
+    } else if (runId) {
+      // Try to load saved research data from the run directory
+      console.log(`DEBUG: BAML - Attempting to load saved research data for runId: ${runId}`);
+      const savedResearch = await this.loadResearchData(runId);
+      if (savedResearch && savedResearch.length > 1000) {
+        console.log(`DEBUG: BAML - Using saved research data (${savedResearch.length} chars)`);
+        researchData = savedResearch;
       } else {
-        console.log(`DEBUG: BAML - Performing web search for topic: ${topic}`);
-        researchData = await this.researchTopic(topic);
+        console.log(`DEBUG: BAML - No substantial saved research data found, performing new research`);
+        researchData = await this.performNewResearch(topic, runId, saveResearch);
       }
+    } else {
+      researchData = await this.performNewResearch(topic, runId, saveResearch);
+    }
 
-      // Save research data immediately to prevent loss
-      if (saveResearch && researchData.length > 50) {
-        console.log(`DEBUG: BAML - Saving research data (${researchData.length} chars)`);
+    // Save research data immediately to prevent loss (for both new and existing research)
+    console.log(`DEBUG: BAML - Checking if research should be saved: saveResearch=${!!saveResearch}, length=${researchData.length}`);
+    if (saveResearch && researchData.length > 50) {
+      console.log(`DEBUG: BAML - Saving research data (${researchData.length} chars)`);
+      try {
         await saveResearch(researchData);
+        console.log(`DEBUG: BAML - Research save callback completed successfully`);
+      } catch (error) {
+        console.error(`ERROR: BAML - Research save callback failed:`, error);
       }
+    } else {
+      console.log(`DEBUG: BAML - Research NOT saved: saveResearch=${!!saveResearch}, length=${researchData.length}`);
     }
 
     // Use research data as cluster context, fallback to provided cluster if research fails

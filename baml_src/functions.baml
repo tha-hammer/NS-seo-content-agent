@@ -30,10 +30,10 @@ Create a structured H1-H3 outline that aligns with search intent, funnel stage, 
 - **Perceived Control**: Confidence in ability (skills, resources, knowledge needed)
 
 ## Structure Requirements
-1. **Minimum 3 H2 sections** with logical flow
-2. **Each H2 must have 2+ key points** to cover
+1. **Minimum 8 H2 sections** with logical flow
+2. **Each H2 must have 3+ key points** to cover
 3. **Optional H3 subsections** for complex topics
-4. **3+ FAQ entries** answering real user questions
+4. **7+ FAQ entries** answering real user questions
 5. **Metadata** with keywords and SEO details
 
 ## Content Focus Areas

@@ -41,7 +41,7 @@ export class BAMLPipeline {
   /**
    * Run complete BAML-powered content generation pipeline
    */
-  static async runComplete(topic: string, cluster: string, outputDir: string = './output'): Promise<PipelineResult> {
+  static async runComplete(topic: string, cluster: string, outputDir: string = '.'): Promise<PipelineResult> {
     const runId = uuidv4();
     const startTime = new Date().toISOString();
 
@@ -70,7 +70,8 @@ export class BAMLPipeline {
         console.log(`DEBUG: Research data saved to pipeline state (${researchData.length} chars)`);
       };
 
-      const outlineResult = await OutlineAgentBAML.generateOutline(topic, state.researchData || cluster, saveResearch);
+      console.log(`DEBUG: Pipeline passing saveResearch callback: ${!!saveResearch}, runId: ${runId}`);
+      const outlineResult = await OutlineAgentBAML.generateOutline(topic, state.researchData || cluster, saveResearch, runId);
 
       if (!outlineResult.success || !outlineResult.data) {
         state.errors.push(`Outline generation failed: ${outlineResult.error}`);
@@ -79,6 +80,10 @@ export class BAMLPipeline {
       }
 
       state.outline = outlineResult.data;
+
+      // Ensure research data is saved after outline generation
+      await this.savePipelineState(state, outputDir);
+
       this.progressFeedback.completeStage('outline', {
         'Title': state.outline.title,
         'Sections': state.outline.headings.length,
@@ -228,7 +233,7 @@ export class BAMLPipeline {
   /**
    * Resume pipeline from saved state
    */
-  static async resumeFromState(runId: string, outputDir: string = './output'): Promise<PipelineResult> {
+  static async resumeFromState(runId: string, outputDir: string = '.'): Promise<PipelineResult> {
     try {
       const statePath = path.join(outputDir, 'runs', `${runId}.json`);
       const stateData = await fs.readFile(statePath, 'utf8');
@@ -239,7 +244,7 @@ export class BAMLPipeline {
       // Continue from the current stage
       switch (state.stage) {
         case 'outline':
-          return this.runComplete(state.topic, state.cluster, outputDir);
+          return this.continueFromOutline(state, outputDir);
 
         case 'draft':
           if (!state.outline) throw new Error('Missing outline data for resume');
@@ -272,6 +277,53 @@ export class BAMLPipeline {
         state: { runId, topic: '', cluster: '', stage: 'outline', startTime: '', errors: [error instanceof Error ? error.message : 'Unknown error'] },
         error: `Resume failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
+    }
+  }
+
+  /**
+   * Continue pipeline from outline stage using saved research data
+   */
+  private static async continueFromOutline(state: PipelineState, outputDir: string): Promise<PipelineResult> {
+    const runId = state.runId;
+
+    try {
+      // Create function to save research data to state (no-op since data already exists)
+      const saveResearch = async (researchData: string) => {
+        state.researchData = researchData;
+        await this.savePipelineState(state, outputDir);
+        console.log(`DEBUG: Research data updated in pipeline state (${researchData.length} chars)`);
+      };
+
+      // Use saved research data if available, otherwise use cluster
+      const researchToUse = state.researchData || state.cluster;
+      if (state.researchData) {
+        console.log(`DEBUG: Resume using saved research data (${state.researchData.length} chars)`);
+      }
+
+      const outlineResult = await OutlineAgentBAML.generateOutline(state.topic, researchToUse, saveResearch, runId);
+
+      if (!outlineResult.success || !outlineResult.data) {
+        state.errors.push(`Outline generation failed: ${outlineResult.error}`);
+        this.progressFeedback.failStage('outline', outlineResult.error || 'Unknown error');
+        return { success: false, runId, state, error: outlineResult.error };
+      }
+
+      state.outline = outlineResult.data;
+      await this.savePipelineState(state, outputDir);
+
+      this.progressFeedback.completeStage('outline', {
+        'Title': state.outline.title,
+        'Sections': state.outline.headings.length,
+        'FAQs': state.outline.faqs.length,
+        'Target Words': state.outline.metadata?.wordcountTarget
+      });
+
+      // Continue with rest of pipeline from draft stage
+      return this.continueFromDraft(state, outputDir);
+
+    } catch (error) {
+      state.errors.push(`Resume from outline failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { success: false, runId, state, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
@@ -322,14 +374,20 @@ export class BAMLPipeline {
   private static async savePipelineState(state: PipelineState, outputDir: string): Promise<void> {
     try {
       const runsDir = path.join(outputDir, 'runs');
+      console.log(`DEBUG: Creating runs directory: ${runsDir}`);
       await fs.mkdir(runsDir, { recursive: true });
 
       const statePath = path.join(runsDir, `${state.runId}.json`);
-      await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf8');
+      const stateJson = JSON.stringify(state, null, 2);
+      console.log(`DEBUG: Saving pipeline state to: ${statePath} (${stateJson.length} chars)`);
+      console.log(`DEBUG: State contains researchData: ${!!state.researchData} (${state.researchData?.length || 0} chars)`);
 
-      console.log(`Pipeline state saved: ${statePath}`);
+      await fs.writeFile(statePath, stateJson, 'utf8');
+
+      console.log(`✅ Pipeline state saved successfully: ${statePath}`);
     } catch (error) {
-      console.warn('Failed to save pipeline state:', error);
+      console.error('❌ FAILED to save pipeline state:', error);
+      throw error; // Re-throw to make failures visible
     }
   }
 

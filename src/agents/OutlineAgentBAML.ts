@@ -13,10 +13,11 @@ export class OutlineAgentBAML {
   /**
    * Generate an outline using BAML structured output
    */
-  static async generateOutline(topic: string, cluster: string, saveResearch?: (data: string) => Promise<void>): Promise<OutlineResult> {
+  static async generateOutline(topic: string, cluster: string, saveResearch?: (data: string) => Promise<void>, runId?: string): Promise<OutlineResult> {
     try {
       console.log('DEBUG: About to call BAML for outline generation...');
-      const result = await this.bamlClient.generateOutline(topic, cluster, saveResearch);
+      console.log(`DEBUG: OutlineAgentBAML received saveResearch callback: ${!!saveResearch}, runId: ${runId}`);
+      const result = await this.bamlClient.generateOutline(topic, cluster, saveResearch, runId);
       console.log('DEBUG: BAML call completed, validating response...');
 
       // Validate the output against our schema
